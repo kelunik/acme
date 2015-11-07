@@ -1,0 +1,24 @@
+{
+    "name": "kelunik/acme",
+    "description": "ACME client written in PHP.",
+    "require": {
+        "gamegos/jws": "^1",
+        "amphp/artax": "^2",
+        "namshi/jose": "^6",
+        "monolog/monolog": "^1.16@dev"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Niklas Keller",
+            "email": "me@kelunik.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "autoload": {
+        "psr-4": {
+            "Kelunik\\Acme\\": "lib"
+        }
+    }
+}
