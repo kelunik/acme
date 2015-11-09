@@ -2,6 +2,11 @@
 
 namespace Kelunik\Acme;
 
+/**
+ * @author Niklas Keller <me@kelunik.com>
+ * @copyright Copyright (c) 2015, Niklas Keller
+ * @package Kelunik\Acme
+ */
 class AcmeResource {
     const NEW_REGISTRATION = "new-reg";
     const RECOVER_REGISTRATION = "recover-reg";

@@ -2,6 +2,11 @@
 
 namespace Kelunik\Acme;
 
+/**
+ * @author Niklas Keller <me@kelunik.com>
+ * @copyright Copyright (c) 2015, Niklas Keller
+ * @package Kelunik\Acme
+ */
 class AcmeError {
     const TYPE_BAD_CSR = "badCSR";
     const TYPE_BAD_NONCE = "badNonce";

@@ -2,6 +2,11 @@
 
 namespace Kelunik\Acme;
 
+/**
+ * @author Niklas Keller <me@kelunik.com>
+ * @copyright Copyright (c) 2015, Niklas Keller
+ * @package Kelunik\Acme
+ */
 class OpenSSLKeyGenerator implements KeyGenerator {
     public function generate(int $bits = 2048): KeyPair {
         if ($bits < 2048) {

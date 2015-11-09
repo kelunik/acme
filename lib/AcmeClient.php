@@ -17,6 +17,11 @@ use Throwable;
 use function Amp\pipe;
 use function Amp\resolve;
 
+/**
+ * @author Niklas Keller <me@kelunik.com>
+ * @copyright Copyright (c) 2015, Niklas Keller
+ * @package Kelunik\Acme
+ */
 class AcmeClient {
     private $http;
     private $keyPair;
