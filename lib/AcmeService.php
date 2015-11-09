@@ -119,6 +119,9 @@ class AcmeService {
 
         yield $this->answerChallenges($location, $challenge);
         yield $this->pollForStatus($location);
+
+        $location = yield $this->requestCertificate($dns);
+        yield $this->pollForCertificate($location, $dns);
     }
 
     private function register(array $contact, string $agreement = null): Promise {
@@ -235,6 +238,78 @@ class AcmeService {
                 break;
             } else {
                 throw new AcmeException("Invalid Challenge Status: " . $data->status);
+            }
+        } while (1);
+    }
+
+    private function requestCertificate(string $dns): Promise {
+        return resolve($this->doRequestCertificate($dns));
+    }
+
+    private function doRequestCertificate(string $dns): Generator {
+        /** @var KeyPair $keyPair */
+        $keyPair = yield $this->acmeAdapter->getKeyPair($dns);
+        $privateKey = openssl_pkey_get_private($keyPair->getPrivate());
+
+        $csr = openssl_csr_new([
+            "commonName" => $dns,
+        ], $privateKey, ["digest_alg" => "sha256"]);
+
+        if (!$csr) {
+            throw new AcmeException("CSR couldn't be generated!");
+        }
+
+        openssl_csr_export($csr, $csr);
+
+        $begin = "REQUEST-----";
+        $end = "----END";
+
+        $csr = substr($csr, strpos($csr, $begin) + strlen($begin));
+        $csr = substr($csr, 0, strpos($csr, $end));
+
+        $enc = new Base64UrlSafeEncoder;
+
+        /** @var Response $response */
+        $response = yield $this->client->post(AcmeResource::NEW_CERTIFICATE, [
+            "csr" => $enc->encode(base64_decode($csr)),
+        ]);
+
+        if ($response->getStatus() === 201) {
+            if (!$response->hasHeader("location")) {
+                throw new AcmeException("Protocol Violation: No Location Header");
+            }
+
+            return $response->getHeader("location");
+        }
+
+        throw new AcmeException("Invalid Response Code: " . $response->getStatus());
+    }
+
+    private function pollForCertificate(string $location, string $dns): Promise {
+        return resolve($this->doPollForCertificate($location, $dns));
+    }
+
+    private function doPollForCertificate(string $location, string $dns): Generator {
+        do {
+            /** @var Response $response */
+            $response = yield $this->acmeClient->get($location);
+
+            if ($response->getStatus() === 202) {
+                if (!$response->hasHeader("retry-after")) {
+                    throw new AcmeException("Protocol Violation: No Retry-After Header");
+                }
+
+                $waitTime = $this->parseRetryAfter($response->getHeader("retry-after")[0]);
+                $waitTime = max($waitTime, 1);
+
+                yield new Pause($waitTime * 1000);
+
+                continue;
+            } elseif ($response->getStatus() === 200) {
+                $pem = chunk_split(base64_encode($response->getBody()), 64, "\n");
+                $pem = "-----BEGIN CERTIFICATE-----\n" . $pem . "-----END CERTIFICATE-----\n";
+
+                yield put(yield $this->acmeAdapter->getCertificatePath($dns), $pem);
             }
         } while (1);
     }
