@@ -127,7 +127,7 @@ class AcmeService {
 
     private function doRegister(array $contact, string $agreement = null): Generator {
         $payload = [
-            "resource" => AcmeResource::REGISTRATION,
+            "contact" => $contact,
         ];
 
         if ($agreement) {
@@ -150,6 +150,7 @@ class AcmeService {
 
             $payload = [
                 "resource" => AcmeResource::REGISTRATION,
+                "contact" => $contact,
             ];
 
             if ($agreement) {
