@@ -115,7 +115,7 @@ class AcmeService {
 
         $payload = $this->signChallenge($token);
 
-        yield $this->acmeAdapter->provideChallenge($token, $payload);
+        yield $this->acmeAdapter->provideChallenge($dns, $token, $payload);
 
         yield $this->answerChallenges($location, $challenge);
         yield $this->pollForStatus($location);
