@@ -92,8 +92,8 @@ class AcmeService {
         return array_map("strtolower", $names);
     }
 
-    public function issueCertificate(string $dns, array $contact): Promise {
-        return resolve($this->doIssueCertificate($dns, $contact));
+    public function issueCertificate(string $dns, array $contact, string $agreement = null): Promise {
+        return resolve($this->doIssueCertificate($dns, $contact, $agreement));
     }
 
     private function doIssueCertificate(string $dns, array $contact, string $agreement = null): Generator {
