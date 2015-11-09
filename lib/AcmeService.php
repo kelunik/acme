@@ -96,8 +96,8 @@ class AcmeService {
         return resolve($this->doIssueCertificate($dns, $contact));
     }
 
-    private function doIssueCertificate(string $dns, array $contact): Generator {
-        yield $this->register($contact);
+    private function doIssueCertificate(string $dns, array $contact, string $agreement = null): Generator {
+        yield $this->register($contact, $agreement);
 
         list($location, $challenges) = yield $this->requestChallenges($dns);
         $goodChallenges = $this->findSuitableCombination($challenges);
@@ -121,15 +121,21 @@ class AcmeService {
         yield $this->pollForStatus($location);
     }
 
-    private function register(array $contact): Promise {
-        return resolve($this->doRegister($contact));
+    private function register(array $contact, string $agreement = null): Promise {
+        return resolve($this->doRegister($contact, $agreement));
     }
 
-    private function doRegister(array $contact): Generator {
+    private function doRegister(array $contact, string $agreement = null): Generator {
+        $payload = [
+            "resource" => AcmeResource::REGISTRATION,
+        ];
+
+        if ($agreement) {
+            $payload["agreement"] = $agreement;
+        }
+
         /** @var Response $response */
-        $response = yield $this->acmeClient->post(AcmeResource::NEW_REGISTRATION, [
-            "contact" => $contact,
-        ]);
+        $response = yield $this->acmeClient->post(AcmeResource::NEW_REGISTRATION, $payload);
 
         if ($response->getStatus() === 201) {
             return json_decode($response->getBody());
@@ -142,9 +148,15 @@ class AcmeService {
 
             list($location) = $response->getHeader("location");
 
-            $response = yield $this->acmeClient->post($location, [
+            $payload = [
                 "resource" => AcmeResource::REGISTRATION,
-            ]);
+            ];
+
+            if ($agreement) {
+                $payload["agreement"] = $agreement;
+            }
+
+            $response = yield $this->acmeClient->post($location, $payload);
 
             return json_decode($response->getBody());
         }
