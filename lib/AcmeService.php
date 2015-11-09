@@ -35,7 +35,7 @@ class AcmeService {
     }
 
     private function doHasValidCertificate(string $dns): Generator {
-        $path = yield $this->listener->getCertificatePath($dns);
+        $path = yield $this->acmeAdapter->getCertificatePath($dns);
 
         if (!yield exists($path)) {
             return false;
