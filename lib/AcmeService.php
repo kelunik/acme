@@ -49,7 +49,7 @@ class AcmeService {
             return [true, -1];
         }
 
-        if (!preg_match("#-----BEGIN CERTIFICATE-----[a-zA-Z0-9_-=/.]+-----END CERTIFICATE-----#", $rawCert, $match)) {
+        if (!preg_match("#-----BEGIN CERTIFICATE-----[a-zA-Z0-9-_=/.+\n]+-----END CERTIFICATE-----#", $rawCert, $match)) {
             return [true, -1];
         }
 
