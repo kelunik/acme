@@ -108,10 +108,10 @@ class AcmeService {
             throw new AcmeException("Couldn't find any combination of challenges which this server can solve!");
         }
 
-        $challenge = $challenges[$goodChallenges[0]];
+        $challenge = $challenges->challenges[$goodChallenges[0]];
         $token = $challenge->token;
 
-        if (!preg_match("#^[a-zA-Z-_]+$#", $token)) {
+        if (!preg_match("#^[a-zA-Z0-9-_]+$#", $token)) {
             throw new AcmeException("Protocol Violation: Invalid Token!");
         }
 
