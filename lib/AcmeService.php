@@ -7,7 +7,6 @@ use Amp\Pause;
 use Amp\Promise;
 use Generator;
 use Namshi\JOSE\Base64\Base64UrlSafeEncoder;
-use Namshi\JOSE\SimpleJWS;
 use stdClass;
 use function Amp\File\exists;
 use function Amp\File\get;
@@ -119,7 +118,7 @@ class AcmeService {
 
         yield $this->acmeAdapter->provideChallenge($dns, $token, $payload);
 
-        yield $this->answerChallenges($challenge->uri, $challenge);
+        yield $this->answerChallenge($challenge->uri, $challenge, $payload);
         yield $this->pollForStatus($location);
 
         $location = yield $this->requestCertificate($dns);
@@ -194,19 +193,18 @@ class AcmeService {
         throw new AcmeException("Invalid Response Code: " . $response->getStatus());
     }
 
-    private function answerChallenges(string $location, stdClass $challenge): Promise {
-        return resolve($this->doAnswerChallenges($location, $challenge));
+    private function answerChallenge(string $location, stdClass $challenge, string $keyAuth): Promise {
+        return resolve($this->doAnswerChallenge($location, $challenge, $keyAuth));
     }
 
-    private function doAnswerChallenges(string $location, stdClass $challenge): Generator {
+    private function doAnswerChallenge(string $location, stdClass $challenge, string $keyAuth): Generator {
         /** @var Response $response */
         $response = yield $this->acmeClient->post($location, [
             "resource" => AcmeResource::CHALLENGE,
-            "type" => $challenge->type,
-            "token" => $challenge->token,
+            "keyAuthorization" => $keyAuth,
         ]);
 
-        if ($response->getStatus() === 200) {
+        if ($response->getStatus() === 202) {
             return json_decode($response->getBody());
         }
 
@@ -224,11 +222,14 @@ class AcmeService {
             $data = json_decode($response->getBody());
 
             if ($data->status === "pending") {
-                if ($response->hasHeader("retry-after")) {
-                    throw new AcmeException("Protocol Violation: No Retry-After Header!");
+                if (!$response->hasHeader("retry-after")) {
+                    // throw new AcmeException("Protocol Violation: No Retry-After Header!");
+
+                    yield new Pause(1000);
+                    continue;
                 }
 
-                $waitTime = $this->parseRetryAfter($response->getHeader("retry-after")[0]);
+                $waitTime = $this->parseRetryAfter(current($response->getHeader("retry-after")));
                 $waitTime = max($waitTime, 1);
 
                 yield new Pause($waitTime * 1000);
@@ -272,7 +273,7 @@ class AcmeService {
         $enc = new Base64UrlSafeEncoder;
 
         /** @var Response $response */
-        $response = yield $this->client->post(AcmeResource::NEW_CERTIFICATE, [
+        $response = yield $this->acmeClient->post(AcmeResource::NEW_CERTIFICATE, [
             "csr" => $enc->encode(base64_decode($csr)),
         ]);
 
@@ -311,7 +312,10 @@ class AcmeService {
                 $pem = chunk_split(base64_encode($response->getBody()), 64, "\n");
                 $pem = "-----BEGIN CERTIFICATE-----\n" . $pem . "-----END CERTIFICATE-----\n";
 
-                yield put(yield $this->acmeAdapter->getCertificatePath($dns), $pem);
+                $key = yield $this->acmeAdapter->getKeyPair($dns);
+                $key = $key->getPrivate();
+
+                yield put(yield $this->acmeAdapter->getCertificatePath($dns), $key . "\n" . $pem);
             }
         } while (1);
     }
@@ -359,21 +363,14 @@ class AcmeService {
         }
 
         $enc = new Base64UrlSafeEncoder;
-        $jws = new SimpleJWS([
-            "alg" => "RS256",
-            "jwk" => [
-                "kty" => "RSA",
-                "n" => $enc->encode($details["rsa"]["n"]),
-                "e" => $enc->encode($details["rsa"]["e"]),
-            ],
-        ]);
+        $details = openssl_pkey_get_details($privateKey);
 
-        $jws->setPayload([
-            "keyAuthorization" => $token,
-        ]);
+        $payload = [
+            "e" => $enc->encode($details["rsa"]["e"]),
+            "kty" => "RSA",
+            "n" => $enc->encode($details["rsa"]["n"]),
+        ];
 
-        $jws->sign($privateKey);
-
-        return $jws->getTokenString();
+        return $token . "." . $enc->encode(hash("sha256", json_encode($payload), true));
     }
 }

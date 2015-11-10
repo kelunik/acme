@@ -118,7 +118,6 @@ class AcmeClient {
             throw new \RuntimeException("Only RSA keys are supported right now.");
         }
 
-
         $uri = yield $this->getResourceUri($resource);
 
         $enc = new Base64UrlSafeEncoder();

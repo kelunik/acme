@@ -28,4 +28,12 @@ interface AcmeAdapter {
      * @return Promise
      */
     public function provideChallenge(string $dns, string $token, string $payload): Promise;
+
+    /**
+     * Implementations MUST return the key pair corresponding to the DNS provided.
+     *
+     * @param string $dns FQDN
+     * @return Promise
+     */
+    public function getKeyPair(string $dns): Promise;
 }
