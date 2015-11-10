@@ -309,13 +309,27 @@ class AcmeService {
 
                 continue;
             } elseif ($response->getStatus() === 200) {
-                $pem = chunk_split(base64_encode($response->getBody()), 64, "\n");
-                $pem = "-----BEGIN CERTIFICATE-----\n" . $pem . "-----END CERTIFICATE-----\n";
-
                 $key = yield $this->acmeAdapter->getKeyPair($dns);
                 $key = $key->getPrivate();
 
-                yield put(yield $this->acmeAdapter->getCertificatePath($dns), $key . "\n" . $pem);
+                $pem = chunk_split(base64_encode($response->getBody()), 64, "\n");
+                $pem = "-----BEGIN CERTIFICATE-----\n" . $pem . "-----END CERTIFICATE-----\n";
+
+                while ($response->hasHeader("link")) {
+                    $links = $response->getHeader("link");
+
+                    foreach ($links as $link) {
+                        if (preg_match("#<(.*?)>;rel=\"up\"#x", $link, $match)) {
+                            $uri = \Sabre\Uri\resolve($response->getRequest()->getUri(), $match[1]);
+                            $response = yield $this->acmeClient->get($uri);
+
+                            $pemEnc = chunk_split(base64_encode($response->getBody()), 64, "\n");
+                            $pem .= "-----BEGIN CERTIFICATE-----\n" . $pemEnc . "-----END CERTIFICATE-----\n";
+                        }
+                    }
+                }
+
+                yield put(yield $this->acmeAdapter->getCertificatePath($dns), $key . "\n" . $pem . "\n");
             }
         } while (1);
     }

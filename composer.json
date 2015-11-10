@@ -5,7 +5,8 @@
         "gamegos/jws": "^1",
         "amphp/artax": "^2",
         "namshi/jose": "^6",
-        "monolog/monolog": "^1.16@dev"
+        "monolog/monolog": "^1.16@dev",
+        "sabre/uri": "dev-master"
     },
     "license": "MIT",
     "authors": [
