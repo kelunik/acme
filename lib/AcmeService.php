@@ -201,7 +201,7 @@ class AcmeService {
     private function doAnswerChallenges(string $location, stdClass $challenge): Generator {
         /** @var Response $response */
         $response = yield $this->acmeClient->post($location, [
-            "resource" => AcmeResource::AUTHORIZATION,
+            "resource" => AcmeResource::CHALLENGE,
             "type" => $challenge->type,
             "token" => $challenge->token,
         ]);
