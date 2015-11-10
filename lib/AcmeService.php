@@ -183,7 +183,7 @@ class AcmeService {
             ],
         ]);
 
-        if ($response->getStatus() === 200) {
+        if ($response->getStatus() === 201) {
             if (!$response->hasHeader("location")) {
                 throw new AcmeException("Protocol Violation: No Location Header!");
             }
