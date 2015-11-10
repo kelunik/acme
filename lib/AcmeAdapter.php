@@ -30,6 +30,15 @@ interface AcmeAdapter {
     public function provideChallenge(string $dns, string $token, string $payload): Promise;
 
     /**
+     * Implementations MUST clean up the before provided challenge.
+     *
+     * @param string $dns FQDN
+     * @param string $token Token is quaranteed to contain only base64 url-safe characters.
+     * @return Promise
+     */
+    public function cleanUpChallenge(string $dns, string $token): Promise;
+
+    /**
      * Implementations MUST return the key pair corresponding to the DNS provided.
      *
      * @param string $dns FQDN
