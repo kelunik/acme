@@ -108,7 +108,7 @@ class AcmeService {
             throw new AcmeException("Couldn't find any combination of challenges which this server can solve!");
         }
 
-        $challenge = $challenges->challenges[$goodChallenges[0]];
+        $challenge = $challenges->challenges[current($goodChallenges)];
         $token = $challenge->token;
 
         if (!preg_match("#^[a-zA-Z0-9-_]+$#", $token)) {
@@ -119,7 +119,7 @@ class AcmeService {
 
         yield $this->acmeAdapter->provideChallenge($dns, $token, $payload);
 
-        yield $this->answerChallenges($location, $challenge);
+        yield $this->answerChallenges($challenge->uri, $challenge);
         yield $this->pollForStatus($location);
 
         $location = yield $this->requestCertificate($dns);
