@@ -188,7 +188,7 @@ class AcmeService {
                 throw new AcmeException("Protocol Violation: No Location Header!");
             }
 
-            return [$response->getHeader("location"), json_decode($response->getBody())];
+            return [current($response->getHeader("location")), json_decode($response->getBody())];
         }
 
         throw new AcmeException("Invalid Response Code: " . $response->getStatus());
@@ -281,7 +281,7 @@ class AcmeService {
                 throw new AcmeException("Protocol Violation: No Location Header");
             }
 
-            return $response->getHeader("location");
+            return current($response->getHeader("location"));
         }
 
         throw new AcmeException("Invalid Response Code: " . $response->getStatus());
