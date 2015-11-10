@@ -184,7 +184,7 @@ class AcmeService {
             return json_decode($response->getBody());
         }
 
-        throw new AcmeException("Invalid Response Code: " . $response->getStatus());
+        throw new AcmeException("Invalid Response Code: " . $response->getStatus() . " " . $response->getBody());
     }
 
     private function requestChallenges(string $dns): Promise {
@@ -208,7 +208,7 @@ class AcmeService {
             return [current($response->getHeader("location")), json_decode($response->getBody())];
         }
 
-        throw new AcmeException("Invalid Response Code: " . $response->getStatus());
+        throw new AcmeException("Invalid Response Code: " . $response->getStatus() . " " . $response->getBody());
     }
 
     private function answerChallenge(string $location, stdClass $challenge, string $keyAuth): Promise {
@@ -226,7 +226,7 @@ class AcmeService {
             return json_decode($response->getBody());
         }
 
-        throw new AcmeException("Invalid Response Code: " . $response->getStatus());
+        throw new AcmeException("Invalid Response Code: " . $response->getStatus() . " " . $response->getBody());
     }
 
     private function pollForStatus(string $location): Promise {
@@ -303,7 +303,7 @@ class AcmeService {
             return current($response->getHeader("location"));
         }
 
-        throw new AcmeException("Invalid Response Code: " . $response->getStatus());
+        throw new AcmeException("Invalid Response Code: " . $response->getStatus() . " " . $response->getBody());
     }
 
     private function pollForCertificate(string $location, string $dns): Promise {
