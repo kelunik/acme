@@ -12,6 +12,7 @@ use function Amp\File\exists;
 use function Amp\File\get;
 use function Amp\File\put;
 use function Amp\resolve;
+use Throwable;
 
 /**
  * @author Niklas Keller <me@kelunik.com>
@@ -125,11 +126,21 @@ class AcmeService {
 
         yield $this->acmeAdapter->provideChallenge($dns, $token, $payload);
 
-        yield $this->answerChallenge($challenge->uri, $challenge, $payload);
-        yield $this->pollForStatus($location);
+        try {
+            yield $this->answerChallenge($challenge->uri, $challenge, $payload);
+            yield $this->pollForStatus($location);
 
-        $location = yield $this->requestCertificate($dns);
-        yield $this->pollForCertificate($location, $dns);
+            $location = yield $this->requestCertificate($dns);
+            yield $this->pollForCertificate($location, $dns);
+
+            yield $this->acmeAdapter->cleanUpChallenge($dns, $token);
+        } catch(Throwable $e) {
+            yield $this->acmeAdapter->cleanUpChallenge($dns, $token);
+
+            throw $e;
+        }
+
+        // no finally because generators...
     }
 
     private function register(array $contact, string $agreement = null): Promise {
