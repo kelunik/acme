@@ -44,11 +44,18 @@ class AcmeService {
             return [true, -1];
         }
 
-        if (!$cert = @openssl_x509_read($rawCert)) {
+        if (!preg_match("#-----BEGIN ([A-Z]+ )?PRIVATE KEY-----#", $rawCert, $match)) {
             return [true, -1];
         }
 
-        if (!preg_match("#-----BEGIN ([A-Z]+ )?PRIVATE KEY-----#", $rawCert)) {
+        if (!preg_match("#-----BEGIN CERTIFICATE-----[a-zA-Z0-9_-=/.]+-----END CERTIFICATE-----#", $rawCert, $match)) {
+            return [true, -1];
+        }
+
+        // check first cert for certificate chains
+        $rawCert = $match[0];
+
+        if (!$cert = @openssl_x509_read($rawCert)) {
             return [true, -1];
         }
 
