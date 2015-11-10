@@ -30,44 +30,44 @@ class AcmeService {
         $this->acmeAdapter = $acmeAdapter;
     }
 
-    public function hasValidCertificate(string $dns): Promise {
-        return resolve($this->doHasValidCertificate($dns));
+    public function getCertificateLifetime(string $dns): Promise {
+        return resolve($this->doGetCertificateLifetime($dns));
     }
 
-    private function doHasValidCertificate(string $dns): Generator {
+    private function doGetCertificateLifetime(string $dns): Generator {
         $path = yield $this->acmeAdapter->getCertificatePath($dns);
 
         if (!yield exists($path)) {
-            return false;
+            return -1;
         }
 
         if (!$rawCert = yield get($path)) {
-            return false;
+            return -1;
         }
 
         if (!$cert = @openssl_x509_read($rawCert)) {
-            return false;
+            return -1;
         }
 
         if (!preg_match("#-----BEGIN ([A-Z]+ )?PRIVATE KEY-----#", $rawCert)) {
-            return false;
+            return -1;
         }
 
         if (!$cert = openssl_x509_parse($cert)) {
-            return false;
+            return -1;
         }
 
         $names = $this->parseNamesFromTlsCertArray($cert);
 
         if (!in_array($dns, $names)) {
-            return false;
+            return -1;
         }
 
         if (time() > $cert["validTo_time_t"]) {
-            return false;
+            return 0;
         }
 
-        return true;
+        return $cert["validTo_time_t"] - time();
     }
 
     private function parseNamesFromTlsCertArray(array $cert): array {
