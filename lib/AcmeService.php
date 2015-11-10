@@ -30,44 +30,46 @@ class AcmeService {
         $this->acmeAdapter = $acmeAdapter;
     }
 
-    public function getCertificateLifetime(string $dns): Promise {
-        return resolve($this->doGetCertificateLifetime($dns));
+    public function getCertificateData(string $dns): Promise {
+        return resolve($this->doGetCertificateData($dns));
     }
 
-    private function doGetCertificateLifetime(string $dns): Generator {
+    private function doGetCertificateData(string $dns): Generator {
         $path = yield $this->acmeAdapter->getCertificatePath($dns);
 
         if (!yield exists($path)) {
-            return -1;
+            return [true, -1];
         }
 
         if (!$rawCert = yield get($path)) {
-            return -1;
+            return [true, -1];
         }
 
         if (!$cert = @openssl_x509_read($rawCert)) {
-            return -1;
+            return [true, -1];
         }
 
         if (!preg_match("#-----BEGIN ([A-Z]+ )?PRIVATE KEY-----#", $rawCert)) {
-            return -1;
+            return [true, -1];
         }
 
         if (!$cert = openssl_x509_parse($cert)) {
-            return -1;
+            return [true, -1];
         }
+
+        $selfSigned = $cert["subject"] === $cert["issuer"];
 
         $names = $this->parseNamesFromTlsCertArray($cert);
 
         if (!in_array($dns, $names)) {
-            return -1;
+            return [$selfSigned, -1];
         }
 
         if (time() > $cert["validTo_time_t"]) {
-            return 0;
+            return [$selfSigned, 0];
         }
 
-        return $cert["validTo_time_t"] - time();
+        return [$selfSigned, $cert["validTo_time_t"] - time()];
     }
 
     private function parseNamesFromTlsCertArray(array $cert): array {
