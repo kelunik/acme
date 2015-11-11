@@ -2,11 +2,10 @@
     "name": "kelunik/acme",
     "description": "ACME client written in PHP.",
     "require": {
-        "gamegos/jws": "^1",
         "amphp/artax": "^2",
+        "monolog/monolog": "^1.16",
         "namshi/jose": "^6",
-        "monolog/monolog": "^1.16@dev",
-        "sabre/uri": "dev-master"
+        "sabre/uri": "^1"
     },
     "license": "MIT",
     "authors": [
