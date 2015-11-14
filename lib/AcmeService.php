@@ -2,7 +2,10 @@
 
 namespace Kelunik\Acme;
 
+use Amp\Artax\DnsException;
 use Amp\Artax\Response;
+use Amp\Dns\Record;
+use Amp\Dns\ResolutionException;
 use Amp\Pause;
 use Amp\Promise;
 use Generator;
@@ -106,6 +109,32 @@ class AcmeService {
     }
 
     private function doIssueCertificate(string $dns, array $contact, string $agreement = null): Generator {
+        try {
+            yield \Amp\Dns\resolve($dns, [
+                "types" => Record::A,
+                "hosts" => false,
+            ]);
+        } catch (ResolutionException $e) {
+            throw new AcmeException("DNS A resolution for '{$dns}' failed!", $e);
+        }
+
+        foreach ($contact as $c) {
+            if (substr($c, 0, 7) === "mailto:") {
+                $mail = substr($c, 7);
+                $host = substr($mail, strrpos($mail, "@") + 1);
+
+                if (!$host) {
+                    throw new AcmeException("Invalid contact information: '{$c}'");
+                }
+
+                try {
+                    yield \Amp\Dns\query($host, Record::MX);
+                } catch(ResolutionException $e) {
+                    throw new AcmeException("DNS MX resolution for '{$host}' failed!");
+                }
+            }
+        }
+
         yield $this->register($contact, $agreement);
 
         list($location, $challenges) = yield $this->requestChallenges($dns);
@@ -124,23 +153,19 @@ class AcmeService {
 
         $payload = $this->signChallenge($token);
 
-        yield $this->acmeAdapter->provideChallenge($dns, $token, $payload);
-
         try {
+            yield $this->acmeAdapter->provideChallenge($dns, $token, $payload);
             yield $this->answerChallenge($challenge->uri, $challenge, $payload);
             yield $this->pollForStatus($location);
-
-            $location = yield $this->requestCertificate($dns);
-            yield $this->pollForCertificate($location, $dns);
-
             yield $this->acmeAdapter->cleanUpChallenge($dns, $token);
         } catch(Throwable $e) {
+            // no finally because generators...
             yield $this->acmeAdapter->cleanUpChallenge($dns, $token);
-
             throw $e;
         }
 
-        // no finally because generators...
+        $location = yield $this->requestCertificate($dns);
+        yield $this->pollForCertificate($location, $dns);
     }
 
     private function register(array $contact, string $agreement = null): Promise {
