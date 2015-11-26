@@ -1,9 +1,8 @@
 {
     "name": "kelunik/acme",
-    "description": "ACME client written in PHP.",
+    "description": "ACME library written in PHP.",
     "require": {
         "amphp/artax": "^2",
-        "monolog/monolog": "^1.16",
         "namshi/jose": "^6",
         "sabre/uri": "^1"
     },

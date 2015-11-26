@@ -2,20 +2,15 @@
 
 namespace Kelunik\Acme;
 
-use Amp\Artax\DnsException;
 use Amp\Artax\Response;
-use Amp\Dns\Record;
-use Amp\Dns\ResolutionException;
 use Amp\Pause;
 use Amp\Promise;
 use Generator;
 use Namshi\JOSE\Base64\Base64UrlSafeEncoder;
-use stdClass;
 use function Amp\File\exists;
 use function Amp\File\get;
 use function Amp\File\put;
 use function Amp\resolve;
-use Throwable;
 
 /**
  * @author Niklas Keller <me@kelunik.com>
@@ -25,156 +20,21 @@ use Throwable;
 class AcmeService {
     private $acmeClient;
     private $accountKeyPair;
-    private $acmeAdapter;
 
-    public function __construct(AcmeClient $acmeClient, KeyPair $accountKeyPair, AcmeAdapter $acmeAdapter) {
+    public function __construct(AcmeClient $acmeClient, KeyPair $accountKeyPair) {
         $this->acmeClient = $acmeClient;
         $this->accountKeyPair = $accountKeyPair;
-        $this->acmeAdapter = $acmeAdapter;
     }
 
-    public function getCertificateData(string $dns): Promise {
-        return resolve($this->doGetCertificateData($dns));
+    public function register(string $email, string $agreement = null): Promise {
+        return resolve($this->doRegister($email, $agreement));
     }
 
-    private function doGetCertificateData(string $dns): Generator {
-        $path = yield $this->acmeAdapter->getCertificatePath($dns);
-
-        if (!yield exists($path)) {
-            return [true, -1];
-        }
-
-        if (!$rawCert = yield get($path)) {
-            return [true, -1];
-        }
-
-        if (!preg_match("#-----BEGIN ([A-Z]+ )?PRIVATE KEY-----#", $rawCert, $match)) {
-            return [true, -1];
-        }
-
-        if (!preg_match("#-----BEGIN CERTIFICATE-----[a-zA-Z0-9-_=/.+\n]+-----END CERTIFICATE-----#", $rawCert, $match)) {
-            return [true, -1];
-        }
-
-        // check first cert for certificate chains
-        $rawCert = $match[0];
-
-        if (!$cert = @openssl_x509_read($rawCert)) {
-            return [true, -1];
-        }
-
-        if (!$cert = openssl_x509_parse($cert)) {
-            return [true, -1];
-        }
-
-        $selfSigned = $cert["subject"] === $cert["issuer"];
-
-        $names = $this->parseNamesFromTlsCertArray($cert);
-
-        if (!in_array($dns, $names)) {
-            return [$selfSigned, -1];
-        }
-
-        if (time() > $cert["validTo_time_t"]) {
-            return [$selfSigned, 0];
-        }
-
-        return [$selfSigned, $cert["validTo_time_t"] - time()];
-    }
-
-    private function parseNamesFromTlsCertArray(array $cert): array {
-        $names = [];
-
-        if (!empty($cert["subject"]["CN"])) {
-            $names[] = $cert["subject"]["CN"];
-        }
-
-        if (empty($cert["extensions"]["subjectAltName"])) {
-            return $names;
-        }
-
-        $parts = array_map("trim", explode(",", $cert["extensions"]["subjectAltName"]));
-
-        foreach ($parts as $part) {
-            if (stripos($part, "DNS:") === 0) {
-                $names[] = substr($part, 4);
-            }
-        }
-
-        return array_map("strtolower", $names);
-    }
-
-    public function issueCertificate(string $dns, array $contact, string $agreement = null): Promise {
-        return resolve($this->doIssueCertificate($dns, $contact, $agreement));
-    }
-
-    private function doIssueCertificate(string $dns, array $contact, string $agreement = null): Generator {
-        try {
-            yield \Amp\Dns\resolve($dns, [
-                "types" => Record::A,
-                "hosts" => false,
-            ]);
-        } catch (ResolutionException $e) {
-            throw new AcmeException("DNS A resolution for '{$dns}' failed!", $e);
-        }
-
-        foreach ($contact as $c) {
-            if (substr($c, 0, 7) === "mailto:") {
-                $mail = substr($c, 7);
-                $host = substr($mail, strrpos($mail, "@") + 1);
-
-                if (!$host) {
-                    throw new AcmeException("Invalid contact information: '{$c}'");
-                }
-
-                try {
-                    yield \Amp\Dns\query($host, Record::MX);
-                } catch(ResolutionException $e) {
-                    throw new AcmeException("DNS MX resolution for '{$host}' failed!");
-                }
-            }
-        }
-
-        yield $this->register($contact, $agreement);
-
-        list($location, $challenges) = yield $this->requestChallenges($dns);
-        $goodChallenges = $this->findSuitableCombination($challenges);
-
-        if (empty($goodChallenges)) {
-            throw new AcmeException("Couldn't find any combination of challenges which this server can solve!");
-        }
-
-        $challenge = $challenges->challenges[current($goodChallenges)];
-        $token = $challenge->token;
-
-        if (!preg_match("#^[a-zA-Z0-9-_]+$#", $token)) {
-            throw new AcmeException("Protocol Violation: Invalid Token!");
-        }
-
-        $payload = $this->signChallenge($token);
-
-        try {
-            yield $this->acmeAdapter->provideChallenge($dns, $token, $payload);
-            yield $this->answerChallenge($challenge->uri, $challenge, $payload);
-            yield $this->pollForStatus($location);
-            yield $this->acmeAdapter->cleanUpChallenge($dns, $token);
-        } catch(Throwable $e) {
-            // no finally because generators...
-            yield $this->acmeAdapter->cleanUpChallenge($dns, $token);
-            throw $e;
-        }
-
-        $location = yield $this->requestCertificate($dns);
-        yield $this->pollForCertificate($location, $dns);
-    }
-
-    private function register(array $contact, string $agreement = null): Promise {
-        return resolve($this->doRegister($contact, $agreement));
-    }
-
-    private function doRegister(array $contact, string $agreement = null): Generator {
+    private function doRegister(string $email, string $agreement = null): Generator {
         $payload = [
-            "contact" => $contact,
+            "contact" => [
+                "mailto:{$email}",
+            ],
         ];
 
         if ($agreement) {
@@ -185,7 +45,9 @@ class AcmeService {
         $response = yield $this->acmeClient->post(AcmeResource::NEW_REGISTRATION, $payload);
 
         if ($response->getStatus() === 201) {
-            return json_decode($response->getBody());
+            $payload = json_decode($response->getBody());
+
+            return new Registration($payload->contact, $payload->agreement, $payload->authorizations, $payload->certificates);
         }
 
         if ($response->getStatus() === 409) {
@@ -197,7 +59,9 @@ class AcmeService {
 
             $payload = [
                 "resource" => AcmeResource::REGISTRATION,
-                "contact" => $contact,
+                "contact" => [
+                    "mailto:{$email}",
+                ],
             ];
 
             if ($agreement) {
@@ -205,14 +69,15 @@ class AcmeService {
             }
 
             $response = yield $this->acmeClient->post($location, $payload);
+            $payload = json_decode($response->getBody());
 
-            return json_decode($response->getBody());
+            return new Registration($payload->contact, $payload->agreement, $payload->authorizations, $payload->certificates);
         }
 
         throw new AcmeException("Invalid Response Code: " . $response->getStatus() . " " . $response->getBody());
     }
 
-    private function requestChallenges(string $dns): Promise {
+    public function requestChallenges(string $dns): Promise {
         return resolve($this->doRequestChallenges($dns));
     }
 
@@ -236,11 +101,11 @@ class AcmeService {
         throw new AcmeException("Invalid Response Code: " . $response->getStatus() . " " . $response->getBody());
     }
 
-    private function answerChallenge(string $location, stdClass $challenge, string $keyAuth): Promise {
-        return resolve($this->doAnswerChallenge($location, $challenge, $keyAuth));
+    public function answerChallenge(string $location, string $keyAuth): Promise {
+        return resolve($this->doAnswerChallenge($location, $keyAuth));
     }
 
-    private function doAnswerChallenge(string $location, stdClass $challenge, string $keyAuth): Generator {
+    private function doAnswerChallenge(string $location, string $keyAuth): Generator {
         /** @var Response $response */
         $response = yield $this->acmeClient->post($location, [
             "resource" => AcmeResource::CHALLENGE,
@@ -254,11 +119,11 @@ class AcmeService {
         throw new AcmeException("Invalid Response Code: " . $response->getStatus() . " " . $response->getBody());
     }
 
-    private function pollForStatus(string $location): Promise {
-        return resolve($this->doPollForStatus($location));
+    public function pollForChallenge(string $location): Promise {
+        return resolve($this->doPollForChallenge($location));
     }
 
-    private function doPollForStatus(string $location): Generator {
+    private function doPollForChallenge(string $location): Generator {
         do {
             /** @var Response $response */
             $response = yield $this->acmeClient->get($location);
@@ -283,23 +148,36 @@ class AcmeService {
             } elseif ($data->status === "valid") {
                 break;
             } else {
-                throw new AcmeException("Invalid Challenge Status: " . $data->status);
+                throw new AcmeException("Invalid challenge status: " . $data->status);
             }
         } while (1);
     }
 
-    private function requestCertificate(string $dns): Promise {
-        return resolve($this->doRequestCertificate($dns));
+    public function requestCertificate(KeyPair $keyPair, array $domains): Promise {
+        return resolve($this->doRequestCertificate($keyPair, $domains));
     }
 
-    private function doRequestCertificate(string $dns): Generator {
-        /** @var KeyPair $keyPair */
-        $keyPair = yield $this->acmeAdapter->getKeyPair($dns);
-        $privateKey = openssl_pkey_get_private($keyPair->getPrivate());
+    private function doRequestCertificate(KeyPair $keyPair, array $domains): Generator {
+        if (!$privateKey = openssl_pkey_get_private($keyPair->getPrivate())) {
+            throw new AcmeException("Couldn't use private key");
+        }
+
+        $san = implode(",", array_map(function ($dns) {
+            return "DNS:" . $dns;
+        }, $domains));
 
         $csr = openssl_csr_new([
-            "commonName" => $dns,
-        ], $privateKey, ["digest_alg" => "sha256"]);
+            "CN" => reset($domains),
+            "ST" => "Germany",
+            "C" => "DE",
+            "O" => "Unknown",
+            "subjectAltName" => $san,
+            "basicConstraints" => "CA:FALSE",
+            "extendedKeyUsage" => "serverAuth",
+        ], $privateKey, [
+            "digest_alg" => "sha256",
+            "req_extensions" => "v3_req",
+        ]);
 
         if (!$csr) {
             throw new AcmeException("CSR couldn't be generated!");
@@ -328,14 +206,14 @@ class AcmeService {
             return current($response->getHeader("location"));
         }
 
-        throw new AcmeException("Invalid Response Code: " . $response->getStatus() . " " . $response->getBody());
+        throw new AcmeException("Invalid response code: " . $response->getStatus() . "\n" . $response->getBody());
     }
 
-    private function pollForCertificate(string $location, string $dns): Promise {
-        return resolve($this->doPollForCertificate($location, $dns));
+    public function pollForCertificate(string $location): Promise {
+        return resolve($this->doPollForCertificate($location));
     }
 
-    private function doPollForCertificate(string $location, string $dns): Generator {
+    private function doPollForCertificate(string $location): Generator {
         do {
             /** @var Response $response */
             $response = yield $this->acmeClient->get($location);
@@ -346,19 +224,27 @@ class AcmeService {
                 }
 
                 $waitTime = $this->parseRetryAfter($response->getHeader("retry-after")[0]);
-                $waitTime = max($waitTime, 1);
+                $waitTime = min(max($waitTime, 2), 60);
 
                 yield new Pause($waitTime * 1000);
 
                 continue;
             } elseif ($response->getStatus() === 200) {
-                $key = yield $this->acmeAdapter->getKeyPair($dns);
-                $key = $key->getPrivate();
-
                 $pem = chunk_split(base64_encode($response->getBody()), 64, "\n");
                 $pem = "-----BEGIN CERTIFICATE-----\n" . $pem . "-----END CERTIFICATE-----\n";
 
+                $certificates = [
+                    $pem,
+                ];
+
+                // prevent potential infinite loop
+                $maximumChainLength = 5;
+
                 while ($response->hasHeader("link")) {
+                    if (!$maximumChainLength--) {
+                        throw new AcmeException("Too long certificate chain");
+                    }
+
                     $links = $response->getHeader("link");
 
                     foreach ($links as $link) {
@@ -366,15 +252,18 @@ class AcmeService {
                             $uri = \Sabre\Uri\resolve($response->getRequest()->getUri(), $match[1]);
                             $response = yield $this->acmeClient->get($uri);
 
-                            $pemEnc = chunk_split(base64_encode($response->getBody()), 64, "\n");
-                            $pem .= "-----BEGIN CERTIFICATE-----\n" . $pemEnc . "-----END CERTIFICATE-----\n";
+                            $pem = chunk_split(base64_encode($response->getBody()), 64, "\n");
+                            $pem = "-----BEGIN CERTIFICATE-----\n" . $pem . "-----END CERTIFICATE-----\n";
+                            $certificates[] = $pem;
                         }
                     }
                 }
 
-                yield put(yield $this->acmeAdapter->getCertificatePath($dns), $key . "\n" . $pem . "\n");
+                return $certificates;
             }
         } while (1);
+
+        throw new AcmeException("Couldn't fetch certificate");
     }
 
     private function parseRetryAfter(string $header) {
@@ -385,42 +274,26 @@ class AcmeService {
         $time = @strtotime($header);
 
         if ($time === false) {
-            throw new AcmeException("Invalid Retry-After Header");
+            throw new AcmeException("Invalid retry-after header");
         }
 
         return max($time - time(), 0);
     }
 
-    private function findSuitableCombination(stdClass $response): array {
-        $challenges = $response->challenges ?? [];
-        $combinations = $response->combinations ?? [];
-        $goodChallenges = [];
-
-        foreach ($challenges as $i => $challenge) {
-            if ($challenge->type === "http-01") {
-                $goodChallenges[] = $i;
-            }
+    public function generateHttp01Payload(string $token): string {
+        if (!$privateKey = openssl_pkey_get_private($this->accountKeyPair->getPrivate())) {
+            throw new AcmeException("Couldn't read private key");
         }
 
-        foreach ($goodChallenges as $i => $challenge) {
-            if (!in_array([$challenge], $combinations)) {
-                unset($goodChallenges[$i]);
-            }
+        if (!$details = openssl_pkey_get_details($privateKey)) {
+            throw new AcmeException("Couldn't get private key details");
         }
-
-        return $goodChallenges;
-    }
-
-    private function signChallenge(string $token): string {
-        $privateKey = openssl_pkey_get_private($this->accountKeyPair->getPrivate());
-        $details = openssl_pkey_get_details($privateKey);
 
         if ($details["type"] !== OPENSSL_KEYTYPE_RSA) {
-            throw new AcmeException("Only RSA keys are supported right now!");
+            throw new AcmeException("Key type not supported, only RSA supported currently");
         }
 
         $enc = new Base64UrlSafeEncoder;
-        $details = openssl_pkey_get_details($privateKey);
 
         $payload = [
             "e" => $enc->encode($details["rsa"]["e"]),
@@ -429,5 +302,31 @@ class AcmeService {
         ];
 
         return $token . "." . $enc->encode(hash("sha256", json_encode($payload), true));
+    }
+
+    public function getAuthorizations(Registration $registration) {
+        /** @var Response $response */
+        $response = $this->acmeClient->post($registration->getAuthorizations(), [
+            "resource" => AcmeResource::REGISTRATION,
+        ]);
+
+        if ($response->getStatus() !== 200) {
+            throw new AcmeException("Invalid response code: " . $response->getStatus() . "\n" . $response->getBody());
+        }
+
+        return json_decode($response->getBody());
+    }
+
+    public function getCertificates(Registration $registration) {
+        /** @var Response $response */
+        $response = $this->acmeClient->post($registration->getAuthorizations(), [
+            "resource" => AcmeResource::REGISTRATION,
+        ]);
+
+        if ($response->getStatus() !== 200) {
+            throw new AcmeException("Invalid response code: " . $response->getStatus() . "\n" . $response->getBody());
+        }
+
+        return json_decode($response->getBody());
     }
 }
