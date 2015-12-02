@@ -2,6 +2,8 @@
 
 namespace Kelunik\Acme;
 
+use Amp\Artax\Client;
+use Amp\Artax\Cookie\NullCookieJar;
 use Amp\Artax\Response;
 use Amp\Pause;
 use Amp\Promise;
@@ -47,6 +49,17 @@ class AcmeService {
         if ($response->getStatus() === 201) {
             $payload = json_decode($response->getBody());
 
+            if ($response->hasHeader("link")) {
+                $links = $response->getHeader("link");
+
+                foreach ($links as $link) {
+                    if (preg_match("#<(.*?)>;rel=\"terms-of-service\"#x", $link, $match)) {
+                        $uri = \Sabre\Uri\resolve($response->getRequest()->getUri(), $match[1]);
+                        return $this->register($email, $uri);
+                    }
+                }
+            }
+
             return new Registration($payload->contact, $payload->agreement, $payload->authorizations, $payload->certificates);
         }
 
@@ -71,7 +84,21 @@ class AcmeService {
             $response = yield $this->acmeClient->post($location, $payload);
             $payload = json_decode($response->getBody());
 
-            return new Registration($payload->contact, $payload->agreement, $payload->authorizations, $payload->certificates);
+            if ($response->hasHeader("link")) {
+                $links = $response->getHeader("link");
+
+                foreach ($links as $link) {
+                    if (preg_match("#<(.*?)>;rel=\"terms-of-service\"#x", $link, $match)) {
+                        $uri = \Sabre\Uri\resolve($response->getRequest()->getUri(), $match[1]);
+
+                        if ($uri !== $agreement) {
+                            return $this->register($email, $uri);
+                        }
+                    }
+                }
+            }
+
+            return new Registration($payload->contact);
         }
 
         throw new AcmeException("Invalid Response Code: " . $response->getStatus() . " " . $response->getBody());
@@ -264,6 +291,21 @@ class AcmeService {
         } while (1);
 
         throw new AcmeException("Couldn't fetch certificate");
+    }
+
+    public function selfVerify(string $domain, string $token, string $payload): Promise {
+        return resolve($this->doSelfVerify($domain, $token, $payload));
+    }
+
+    private function doSelfVerify(string $domain, string $token, string $payload): Generator {
+        $uri = "http://{$domain}/.well-known/acme-challenge/{$token}";
+
+        /** @var Response $response */
+        $response = yield (new Client(new NullCookieJar))->request($uri);
+
+        if ($payload !== trim($response->getBody())) {
+            throw new AcmeException("Self verification failed, please check {$uri}");
+        }
     }
 
     private function parseRetryAfter(string $header) {

@@ -79,7 +79,7 @@ class AcmeClient {
             return new Success($this->dictionary[$resource]);
         }
 
-        return new Failure(new AcmeException("Unknown resource!"));
+        return new Failure(new AcmeException("Unknown resource: " . $resource));
     }
 
     private function fetchDictionary(): Generator {
