@@ -308,6 +308,31 @@ class AcmeService {
         }
     }
 
+    public function revokeCertificate(string $pem): Promise {
+        return resolve($this->doRevokeCertificate($pem));
+    }
+
+    private function doRevokeCertificate(string $pem): Generator {
+        $begin = "CERTIFICATE-----";
+        $end = "----END";
+
+        $pem = substr($pem, strpos($pem, $begin) + strlen($begin));
+        $pem = substr($pem, 0, strpos($pem, $end));
+
+        $enc = new Base64UrlSafeEncoder;
+
+        /** @var Response $response */
+        $response = yield $this->acmeClient->post(AcmeResource::REVOKE_CERTIFICATE, [
+            "certificate" => $enc->encode(base64_decode($pem)),
+        ]);
+
+        if ($response->getStatus() === 200) {
+            return true;
+        }
+
+        throw new AcmeException("Invalid response code: " . $response->getStatus() . "\n" . $response->getBody());
+    }
+
     private function parseRetryAfter(string $header) {
         if (preg_match("#^[0-9]+$#", $header)) {
             return (int) $header;
