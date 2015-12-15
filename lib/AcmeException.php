@@ -10,4 +10,7 @@ use Exception;
  * @package Kelunik\Acme
  */
 class AcmeException extends Exception {
+    public function __construct($message, $code = null, $previous = null) {
+        parent::__construct($message, $code, $previous);
+    }
 }

@@ -9,8 +9,11 @@ use Amp\Artax\Response;
 use Amp\Deferred;
 use Amp\Failure;
 use Amp\Success;
+use Exception;
+use InvalidArgumentException;
 use Namshi\JOSE\Base64\Base64UrlSafeEncoder;
 use Namshi\JOSE\SimpleJWS;
+use Throwable;
 
 /**
  * @author Niklas Keller <me@kelunik.com>
@@ -26,7 +29,7 @@ class AcmeClient {
 
     public function __construct($dictionaryUri, KeyPair $keyPair, Client $http = null) {
         if (!is_string($dictionaryUri)) {
-            throw new \InvalidArgumentException(sprintf("\$dictionaryUri must be of type string, %s given", gettype($dictionaryUri)));
+            throw new InvalidArgumentException(sprintf("\$dictionaryUri must be of type string, %s given.", gettype($dictionaryUri)));
         }
 
         $this->dictionaryUri = $dictionaryUri;
@@ -37,7 +40,7 @@ class AcmeClient {
 
     private function getNonce($uri) {
         if (!is_string($uri)) {
-            throw new \InvalidArgumentException(sprintf("\$uri must be of type string, %s given", gettype($uri)));
+            throw new InvalidArgumentException(sprintf("\$uri must be of type string, %s given.", gettype($uri)));
         }
 
         if (empty($this->nonces)) {
@@ -49,18 +52,18 @@ class AcmeClient {
 
     private function requestNonce($uri) {
         if (!is_string($uri)) {
-            throw new \InvalidArgumentException(sprintf("\$uri must be of type string, %s given", gettype($uri)));
+            throw new InvalidArgumentException(sprintf("\$uri must be of type string, %s given.", gettype($uri)));
         }
 
         $deferred = new Deferred;
-
         $request = (new Request)->setMethod("HEAD")->setUri($uri);
-        $this->http->request($request)->when(function ($error = null, Response $response = null) use ($deferred) {
+
+        $this->http->request($request)->when(function ($error = null, Response $response = null) use ($deferred, $uri) {
             if ($error) {
-                $deferred->fail(new AcmeException("Couldn't fetch nonce!", $error));
+                $deferred->fail(new AcmeException("HEAD request to {$uri} failed, could not obtain a replay nonce.", null, $error));
             } else {
                 if (!$response->hasHeader("replay-nonce")) {
-                    $deferred->fail(new AcmeException("Server didn't send required replay-nonce header!"));
+                    $deferred->fail(new AcmeException("HTTP response didn't carry replay-nonce header."));
                 }
 
                 list($nonce) = $response->getHeader("replay-nonce");
@@ -73,7 +76,7 @@ class AcmeClient {
 
     private function getResourceUri($resource) {
         if (!is_string($resource)) {
-            throw new \InvalidArgumentException(sprintf("\$resource must be of type string, %s given", gettype($resource)));
+            throw new InvalidArgumentException(sprintf("\$resource must be of type string, %s given.", gettype($resource)));
         }
 
         if (substr($resource, 0, 8) === "https://") {
@@ -90,24 +93,36 @@ class AcmeClient {
             return new Success($this->dictionary[$resource]);
         }
 
-        return new Failure(new AcmeException("Unknown resource: " . $resource));
+        return new Failure(new AcmeException("Resource not found in directory: '{$resource}'."));
     }
 
     private function fetchDictionary() {
-        /** @var Response $response */
-        $response = (yield $this->http->request($this->dictionaryUri));
+        try {
+            /** @var Response $response */
+            $response = (yield $this->http->request($this->dictionaryUri));
 
-        if ($response->getStatus() !== 200) {
-            throw new AcmeException("Invalid directory response code: " . $response->getStatus());
+            if ($response->getStatus() !== 200) {
+                $info = json_decode($response->getBody());
+
+                if (isset($info->type, $info->detail)) {
+                    throw new AcmeException("Invalid directory response: {$info->detail}", $info->type);
+                }
+
+                throw new AcmeException("Invalid directory response. HTTP response code: " . $response->getStatus());
+            }
+
+            $this->dictionary = json_decode($response->getBody(), true) ?: [];
+            $this->saveNonce($response);
+        } catch(Exception $e) {
+            throw new AcmeException("Could not obtain directory.", null, $e);
+        } catch(Throwable $e) {
+            throw new AcmeException("Could not obtain directory.", null, $e);
         }
-
-        $this->dictionary = json_decode($response->getBody(), true) ?: [];
-        $this->saveNonce($response);
     }
 
     public function get($resource) {
         if (!is_string($resource)) {
-            throw new \InvalidArgumentException(sprintf("\$resource must be of type string, %s given", gettype($resource)));
+            throw new InvalidArgumentException(sprintf("\$resource must be of type string, %s given.", gettype($resource)));
         }
 
         return \Amp\resolve($this->doGet($resource));
@@ -115,20 +130,26 @@ class AcmeClient {
 
     private function doGet($resource) {
         if (!is_string($resource)) {
-            throw new \InvalidArgumentException(sprintf("\$resource must be of type string, %s given", gettype($resource)));
+            throw new InvalidArgumentException(sprintf("\$resource must be of type string, %s given.", gettype($resource)));
         }
 
         $uri = (yield $this->getResourceUri($resource));
 
-        $response = (yield $this->http->request($uri));
-        $this->saveNonce($response);
+        try {
+            $response = (yield $this->http->request($uri));
+            $this->saveNonce($response);
+        } catch(Exception $e) {
+            throw new AcmeException("GET request to {$uri} failed.", null, $e);
+        } catch(Throwable $e) {
+            throw new AcmeException("GET request to {$uri} failed.", null, $e);
+        }
 
         return $response;
     }
 
     public function post($resource, array $payload) {
         if (!is_string($resource)) {
-            throw new \InvalidArgumentException(sprintf("\$resource must be of type string, %s given", gettype($resource)));
+            throw new InvalidArgumentException(sprintf("\$resource must be of type string, %s given.", gettype($resource)));
         }
 
         return \Amp\resolve($this->doPost($resource, $payload));
@@ -136,7 +157,7 @@ class AcmeClient {
 
     private function doPost($resource, array $payload) {
         if (!is_string($resource)) {
-            throw new \InvalidArgumentException(sprintf("\$resource must be of type string, %s given", gettype($resource)));
+            throw new InvalidArgumentException(sprintf("\$resource must be of type string, %s given.", gettype($resource)));
         }
 
         $privateKey = openssl_pkey_get_private($this->keyPair->getPrivate());
@@ -166,8 +187,14 @@ class AcmeClient {
 
         $request = (new Request)->setMethod("POST")->setUri($uri)->setBody($jws->getTokenString());
 
-        $response = (yield $this->http->request($request));
-        $this->saveNonce($response);
+        try {
+            $response = (yield $this->http->request($request));
+            $this->saveNonce($response);
+        } catch(Exception $e) {
+            throw new AcmeException("POST request to {$uri} failed.", null, $e);
+        } catch(Throwable $e) {
+            throw new AcmeException("POST request to {$uri} failed.", null, $e);
+        }
 
         return $response;
     }
