@@ -8,5 +8,5 @@ namespace Kelunik\Acme;
  * @package Kelunik\Acme
  */
 interface KeyGenerator {
-    public function generate(int $bits): KeyPair;
+    public function generate($bits);
 }

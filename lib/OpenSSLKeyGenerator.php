@@ -8,9 +8,13 @@ namespace Kelunik\Acme;
  * @package Kelunik\Acme
  */
 class OpenSSLKeyGenerator implements KeyGenerator {
-    public function generate(int $bits = 2048): KeyPair {
+    public function generate($bits = 2048) {
+        if (!is_int($bits)) {
+            throw new \InvalidArgumentException(sprintf("\$bits must be of type int, %s given", gettype($bits)));
+        }
+
         if ($bits < 2048) {
-            throw new \RuntimeException("Keys with fewer than 2048 bits are not allowed!");
+            throw new \InvalidArgumentException("Keys with fewer than 2048 bits are not allowed!");
         }
 
         $res = openssl_pkey_new([

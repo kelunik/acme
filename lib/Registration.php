@@ -14,7 +14,7 @@ class Registration {
         $this->contact = $contact;
     }
 
-    public function getContact(): array {
+    public function getContact() {
         return $this->contact;
     }
 }

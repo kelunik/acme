@@ -11,16 +11,24 @@ class KeyPair {
     private $private;
     private $public;
 
-    public function __construct(string $private, string $public) {
+    public function __construct($private, $public) {
+        if (!is_string($private)) {
+            throw new \InvalidArgumentException(sprintf("\$private must be of type string, %s given", gettype($private)));
+        }
+
+        if (!is_string($public)) {
+            throw new \InvalidArgumentException(sprintf("\$public must be of type string, %s given", gettype($public)));
+        }
+
         $this->private = $private;
         $this->public = $public;
     }
 
-    public function getPrivate(): string {
+    public function getPrivate() {
         return $this->private;
     }
 
-    public function getPublic(): string {
+    public function getPublic() {
         return $this->public;
     }
 }

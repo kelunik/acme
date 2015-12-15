@@ -8,14 +8,9 @@ use Amp\Artax\Request;
 use Amp\Artax\Response;
 use Amp\Deferred;
 use Amp\Failure;
-use Amp\Promise;
 use Amp\Success;
-use Generator;
 use Namshi\JOSE\Base64\Base64UrlSafeEncoder;
 use Namshi\JOSE\SimpleJWS;
-use Throwable;
-use function Amp\pipe;
-use function Amp\resolve;
 
 /**
  * @author Niklas Keller <me@kelunik.com>
@@ -29,14 +24,22 @@ class AcmeClient {
     private $dictionary;
     private $nonces;
 
-    public function __construct(string $dictionaryUri, KeyPair $keyPair, Client $http = null) {
+    public function __construct($dictionaryUri, KeyPair $keyPair, Client $http = null) {
+        if (!is_string($dictionaryUri)) {
+            throw new \InvalidArgumentException(sprintf("\$dictionaryUri must be of type string, %s given", gettype($dictionaryUri)));
+        }
+
         $this->dictionaryUri = $dictionaryUri;
         $this->keyPair = $keyPair;
         $this->http = $http ?: new Client(new NullCookieJar);
         $this->nonces = [];
     }
 
-    private function getNonce(string $uri): Promise {
+    private function getNonce($uri) {
+        if (!is_string($uri)) {
+            throw new \InvalidArgumentException(sprintf("\$uri must be of type string, %s given", gettype($uri)));
+        }
+
         if (empty($this->nonces)) {
             return $this->requestNonce($uri);
         }
@@ -44,11 +47,15 @@ class AcmeClient {
         return new Success(array_shift($this->nonces));
     }
 
-    private function requestNonce(string $uri): Promise {
+    private function requestNonce($uri) {
+        if (!is_string($uri)) {
+            throw new \InvalidArgumentException(sprintf("\$uri must be of type string, %s given", gettype($uri)));
+        }
+
         $deferred = new Deferred;
 
         $request = (new Request)->setMethod("HEAD")->setUri($uri);
-        $this->http->request($request)->when(function (Throwable $error = null, Response $response = null) use ($deferred) {
+        $this->http->request($request)->when(function ($error = null, Response $response = null) use ($deferred) {
             if ($error) {
                 $deferred->fail(new AcmeException("Couldn't fetch nonce!", $error));
             } else {
@@ -64,13 +71,17 @@ class AcmeClient {
         return $deferred->promise();
     }
 
-    private function getResourceUri(string $resource): Promise {
+    private function getResourceUri($resource) {
+        if (!is_string($resource)) {
+            throw new \InvalidArgumentException(sprintf("\$resource must be of type string, %s given", gettype($resource)));
+        }
+
         if (substr($resource, 0, 8) === "https://") {
             return new Success($resource);
         }
 
         if (!$this->dictionary) {
-            return pipe(resolve($this->fetchDictionary()), function () use ($resource) {
+            return \Amp\pipe(\Amp\resolve($this->fetchDictionary()), function () use ($resource) {
                 return $this->getResourceUri($resource);
             });
         }
@@ -82,35 +93,52 @@ class AcmeClient {
         return new Failure(new AcmeException("Unknown resource: " . $resource));
     }
 
-    private function fetchDictionary(): Generator {
-        $response = yield $this->http->request($this->dictionaryUri);
+    private function fetchDictionary() {
+        /** @var Response $response */
+        $response = (yield $this->http->request($this->dictionaryUri));
 
         if ($response->getStatus() !== 200) {
             throw new AcmeException("Invalid directory response code: " . $response->getStatus());
         }
 
-        $this->dictionary = json_decode($response->getBody(), true) ?? [];
+        $this->dictionary = json_decode($response->getBody(), true) ?: [];
         $this->saveNonce($response);
     }
 
-    public function get(string $resource): Promise {
-        return resolve($this->doGet($resource));
+    public function get($resource) {
+        if (!is_string($resource)) {
+            throw new \InvalidArgumentException(sprintf("\$resource must be of type string, %s given", gettype($resource)));
+        }
+
+        return \Amp\resolve($this->doGet($resource));
     }
 
-    private function doGet(string $resource): Generator {
-        $uri = yield $this->getResourceUri($resource);
+    private function doGet($resource) {
+        if (!is_string($resource)) {
+            throw new \InvalidArgumentException(sprintf("\$resource must be of type string, %s given", gettype($resource)));
+        }
 
-        $response = yield $this->http->request($uri);
+        $uri = (yield $this->getResourceUri($resource));
+
+        $response = (yield $this->http->request($uri));
         $this->saveNonce($response);
 
         return $response;
     }
 
-    public function post(string $resource, array $payload): Promise {
-        return resolve($this->doPost($resource, $payload));
+    public function post($resource, array $payload) {
+        if (!is_string($resource)) {
+            throw new \InvalidArgumentException(sprintf("\$resource must be of type string, %s given", gettype($resource)));
+        }
+
+        return \Amp\resolve($this->doPost($resource, $payload));
     }
 
-    private function doPost(string $resource, array $payload): Generator {
+    private function doPost($resource, array $payload) {
+        if (!is_string($resource)) {
+            throw new \InvalidArgumentException(sprintf("\$resource must be of type string, %s given", gettype($resource)));
+        }
+
         $privateKey = openssl_pkey_get_private($this->keyPair->getPrivate());
         $details = openssl_pkey_get_details($privateKey);
 
@@ -118,7 +146,7 @@ class AcmeClient {
             throw new \RuntimeException("Only RSA keys are supported right now.");
         }
 
-        $uri = yield $this->getResourceUri($resource);
+        $uri = (yield $this->getResourceUri($resource));
 
         $enc = new Base64UrlSafeEncoder();
         $jws = new SimpleJWS([
@@ -128,17 +156,17 @@ class AcmeClient {
                 "n" => $enc->encode($details["rsa"]["n"]),
                 "e" => $enc->encode($details["rsa"]["e"]),
             ],
-            "nonce" => yield $this->getNonce($uri),
+            "nonce" => (yield $this->getNonce($uri)),
         ]);
 
-        $payload["resource"] = $payload["resource"] ?? $resource;
+        $payload["resource"] = isset($payload["resource"]) ? $payload["resource"] : $resource;
 
         $jws->setPayload($payload);
         $jws->sign($privateKey);
 
         $request = (new Request)->setMethod("POST")->setUri($uri)->setBody($jws->getTokenString());
 
-        $response = yield $this->http->request($request);
+        $response = (yield $this->http->request($request));
         $this->saveNonce($response);
 
         return $response;

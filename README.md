@@ -9,7 +9,7 @@
 
 **Required PHP Version**
 
-- PHP 7
+- PHP 5.5
 
 **Installation**
 

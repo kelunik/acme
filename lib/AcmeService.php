@@ -5,14 +5,9 @@ namespace Kelunik\Acme;
 use Amp\Artax\Client;
 use Amp\Artax\Cookie\NullCookieJar;
 use Amp\Artax\Response;
+use Amp\CoroutineResult;
 use Amp\Pause;
-use Amp\Promise;
-use Generator;
 use Namshi\JOSE\Base64\Base64UrlSafeEncoder;
-use function Amp\File\exists;
-use function Amp\File\get;
-use function Amp\File\put;
-use function Amp\resolve;
 
 /**
  * @author Niklas Keller <me@kelunik.com>
@@ -28,11 +23,27 @@ class AcmeService {
         $this->accountKeyPair = $accountKeyPair;
     }
 
-    public function register(string $email, string $agreement = null): Promise {
-        return resolve($this->doRegister($email, $agreement));
+    public function register($email, $agreement = null) {
+        if (!is_string($email)) {
+            throw new \InvalidArgumentException(sprintf("\$email must be of type string, %s given", gettype($email)));
+        }
+
+        if ($agreement !== null && !is_string($agreement)) {
+            throw new \InvalidArgumentException(sprintf("\$agreement must be of type string, %s given", gettype($agreement)));
+        }
+
+        return \Amp\resolve($this->doRegister($email, $agreement));
     }
 
-    private function doRegister(string $email, string $agreement = null): Generator {
+    private function doRegister($email, $agreement = null) {
+        if (!is_string($email)) {
+            throw new \InvalidArgumentException(sprintf("\$email must be of type string, %s given", gettype($email)));
+        }
+
+        if ($agreement !== null && !is_string($agreement)) {
+            throw new \InvalidArgumentException(sprintf("\$agreement must be of type string, %s given", gettype($agreement)));
+        }
+
         $payload = [
             "contact" => [
                 "mailto:{$email}",
@@ -44,7 +55,7 @@ class AcmeService {
         }
 
         /** @var Response $response */
-        $response = yield $this->acmeClient->post(AcmeResource::NEW_REGISTRATION, $payload);
+        $response = (yield $this->acmeClient->post(AcmeResource::NEW_REGISTRATION, $payload));
 
         if ($response->getStatus() === 201) {
             $payload = json_decode($response->getBody());
@@ -55,12 +66,13 @@ class AcmeService {
                 foreach ($links as $link) {
                     if (preg_match("#<(.*?)>;rel=\"terms-of-service\"#x", $link, $match)) {
                         $uri = \Sabre\Uri\resolve($response->getRequest()->getUri(), $match[1]);
-                        return $this->register($email, $uri);
+                        yield new CoroutineResult($this->register($email, $uri));
+                        return;
                     }
                 }
             }
 
-            return new Registration($payload->contact, $payload->agreement, $payload->authorizations, $payload->certificates);
+            yield new CoroutineResult(new Registration($payload->contact, $payload->agreement, $payload->authorizations, $payload->certificates));
         }
 
         if ($response->getStatus() === 409) {
@@ -81,7 +93,7 @@ class AcmeService {
                 $payload["agreement"] = $agreement;
             }
 
-            $response = yield $this->acmeClient->post($location, $payload);
+            $response = (yield $this->acmeClient->post($location, $payload));
             $payload = json_decode($response->getBody());
 
             if ($response->hasHeader("link")) {
@@ -92,52 +104,79 @@ class AcmeService {
                         $uri = \Sabre\Uri\resolve($response->getRequest()->getUri(), $match[1]);
 
                         if ($uri !== $agreement) {
-                            return $this->register($email, $uri);
+                            yield new CoroutineResult($this->register($email, $uri));
+                            return;
                         }
                     }
                 }
             }
 
-            return new Registration($payload->contact);
+            yield new CoroutineResult(new Registration($payload->contact));
+            return;
         }
 
         throw new AcmeException("Invalid Response Code: " . $response->getStatus() . " " . $response->getBody());
     }
 
-    public function requestChallenges(string $dns): Promise {
-        return resolve($this->doRequestChallenges($dns));
+    public function requestChallenges($dns) {
+        if (!is_string($dns)) {
+            throw new \InvalidArgumentException(sprintf("\$dns must be of type string, %s given", gettype($dns)));
+        }
+
+        return \Amp\resolve($this->doRequestChallenges($dns));
     }
 
-    private function doRequestChallenges(string $dns): Generator {
+    private function doRequestChallenges($dns) {
+        if (!is_string($dns)) {
+            throw new \InvalidArgumentException(sprintf("\$dns must be of type string, %s given", gettype($dns)));
+        }
+
         /** @var Response $response */
-        $response = yield $this->acmeClient->post(AcmeResource::NEW_AUTHORIZATION, [
+        $response = (yield $this->acmeClient->post(AcmeResource::NEW_AUTHORIZATION, [
             "identifier" => [
                 "type" => "dns",
                 "value" => $dns,
             ],
-        ]);
+        ]));
 
         if ($response->getStatus() === 201) {
             if (!$response->hasHeader("location")) {
                 throw new AcmeException("Protocol Violation: No Location Header!");
             }
 
-            return [current($response->getHeader("location")), json_decode($response->getBody())];
+            yield new CoroutineResult([current($response->getHeader("location")), json_decode($response->getBody())]);
+            return;
         }
 
         throw new AcmeException("Invalid Response Code: " . $response->getStatus() . " " . $response->getBody());
     }
 
-    public function answerChallenge(string $location, string $keyAuth): Promise {
-        return resolve($this->doAnswerChallenge($location, $keyAuth));
+    public function answerChallenge($location, $keyAuth) {
+        if (!is_string($location)) {
+            throw new \InvalidArgumentException(sprintf("\$location must be of type string, %s given", gettype($location)));
+        }
+
+        if (!is_string($keyAuth)) {
+            throw new \InvalidArgumentException(sprintf("\$keyAuth must be of type string, %s given", gettype($keyAuth)));
+        }
+
+        return \Amp\resolve($this->doAnswerChallenge($location, $keyAuth));
     }
 
-    private function doAnswerChallenge(string $location, string $keyAuth): Generator {
+    private function doAnswerChallenge($location, $keyAuth) {
+        if (!is_string($location)) {
+            throw new \InvalidArgumentException(sprintf("\$location must be of type string, %s given", gettype($location)));
+        }
+
+        if (!is_string($keyAuth)) {
+            throw new \InvalidArgumentException(sprintf("\$keyAuth must be of type string, %s given", gettype($keyAuth)));
+        }
+
         /** @var Response $response */
-        $response = yield $this->acmeClient->post($location, [
+        $response = (yield $this->acmeClient->post($location, [
             "resource" => AcmeResource::CHALLENGE,
             "keyAuthorization" => $keyAuth,
-        ]);
+        ]));
 
         if ($response->getStatus() === 202) {
             return json_decode($response->getBody());
@@ -146,14 +185,22 @@ class AcmeService {
         throw new AcmeException("Invalid Response Code: " . $response->getStatus() . " " . $response->getBody());
     }
 
-    public function pollForChallenge(string $location): Promise {
-        return resolve($this->doPollForChallenge($location));
+    public function pollForChallenge($location) {
+        if (!is_string($location)) {
+            throw new \InvalidArgumentException(sprintf("\$location must be of type string, %s given", gettype($location)));
+        }
+
+        return \Amp\resolve($this->doPollForChallenge($location));
     }
 
-    private function doPollForChallenge(string $location): Generator {
+    private function doPollForChallenge($location) {
+        if (!is_string($location)) {
+            throw new \InvalidArgumentException(sprintf("\$location must be of type string, %s given", gettype($location)));
+        }
+
         do {
             /** @var Response $response */
-            $response = yield $this->acmeClient->get($location);
+            $response = (yield $this->acmeClient->get($location));
             $data = json_decode($response->getBody());
 
             if ($data->status === "pending") {
@@ -180,12 +227,13 @@ class AcmeService {
         } while (1);
     }
 
-    public function requestCertificate(KeyPair $keyPair, array $domains): Promise {
-        return resolve($this->doRequestCertificate($keyPair, $domains));
+    public function requestCertificate(KeyPair $keyPair, array $domains) {
+        return \Amp\resolve($this->doRequestCertificate($keyPair, $domains));
     }
 
-    private function doRequestCertificate(KeyPair $keyPair, array $domains): Generator {
+    private function doRequestCertificate(KeyPair $keyPair, array $domains) {
         if (!$privateKey = openssl_pkey_get_private($keyPair->getPrivate())) {
+            // TODO: Improve error message
             throw new AcmeException("Couldn't use private key");
         }
 
@@ -207,6 +255,7 @@ class AcmeService {
         ]);
 
         if (!$csr) {
+            // TODO: Improve error message
             throw new AcmeException("CSR couldn't be generated!");
         }
 
@@ -221,29 +270,38 @@ class AcmeService {
         $enc = new Base64UrlSafeEncoder;
 
         /** @var Response $response */
-        $response = yield $this->acmeClient->post(AcmeResource::NEW_CERTIFICATE, [
+        $response = (yield $this->acmeClient->post(AcmeResource::NEW_CERTIFICATE, [
             "csr" => $enc->encode(base64_decode($csr)),
-        ]);
+        ]));
 
         if ($response->getStatus() === 201) {
             if (!$response->hasHeader("location")) {
                 throw new AcmeException("Protocol Violation: No Location Header");
             }
 
-            return current($response->getHeader("location"));
+            yield new CoroutineResult(current($response->getHeader("location")));
+            return;
         }
 
         throw new AcmeException("Invalid response code: " . $response->getStatus() . "\n" . $response->getBody());
     }
 
-    public function pollForCertificate(string $location): Promise {
-        return resolve($this->doPollForCertificate($location));
+    public function pollForCertificate($location) {
+        if (!is_string($location)) {
+            throw new \InvalidArgumentException(sprintf("\$location must be of type string, %s given", gettype($location)));
+        }
+
+        return \Amp\resolve($this->doPollForCertificate($location));
     }
 
-    private function doPollForCertificate(string $location): Generator {
+    private function doPollForCertificate($location) {
+        if (!is_string($location)) {
+            throw new \InvalidArgumentException(sprintf("\$location must be of type string, %s given", gettype($location)));
+        }
+
         do {
             /** @var Response $response */
-            $response = yield $this->acmeClient->get($location);
+            $response = (yield $this->acmeClient->get($location));
 
             if ($response->getStatus() === 202) {
                 if (!$response->hasHeader("retry-after")) {
@@ -277,7 +335,7 @@ class AcmeService {
                     foreach ($links as $link) {
                         if (preg_match("#<(.*?)>;rel=\"up\"#x", $link, $match)) {
                             $uri = \Sabre\Uri\resolve($response->getRequest()->getUri(), $match[1]);
-                            $response = yield $this->acmeClient->get($uri);
+                            $response = (yield $this->acmeClient->get($uri));
 
                             $pem = chunk_split(base64_encode($response->getBody()), 64, "\n");
                             $pem = "-----BEGIN CERTIFICATE-----\n" . $pem . "-----END CERTIFICATE-----\n";
@@ -286,33 +344,66 @@ class AcmeService {
                     }
                 }
 
-                return $certificates;
+                yield new CoroutineResult($certificates);
+                return;
             }
         } while (1);
 
         throw new AcmeException("Couldn't fetch certificate");
     }
 
-    public function selfVerify(string $domain, string $token, string $payload): Promise {
-        return resolve($this->doSelfVerify($domain, $token, $payload));
+    public function selfVerify($domain, $token, $payload) {
+        if (!is_string($domain)) {
+            throw new \InvalidArgumentException(sprintf("\$domain must be of type string, %s given", gettype($domain)));
+        }
+
+        if (!is_string($token)) {
+            throw new \InvalidArgumentException(sprintf("\$token must be of type string, %s given", gettype($token)));
+        }
+
+        if (!is_string($payload)) {
+            throw new \InvalidArgumentException(sprintf("\$payload must be of type string, %s given", gettype($payload)));
+        }
+
+        return \Amp\resolve($this->doSelfVerify($domain, $token, $payload));
     }
 
-    private function doSelfVerify(string $domain, string $token, string $payload): Generator {
+    private function doSelfVerify($domain, $token, $payload) {
+        if (!is_string($domain)) {
+            throw new \InvalidArgumentException(sprintf("\$domain must be of type string, %s given", gettype($domain)));
+        }
+
+        if (!is_string($token)) {
+            throw new \InvalidArgumentException(sprintf("\$token must be of type string, %s given", gettype($token)));
+        }
+
+        if (!is_string($payload)) {
+            throw new \InvalidArgumentException(sprintf("\$payload must be of type string, %s given", gettype($payload)));
+        }
+
         $uri = "http://{$domain}/.well-known/acme-challenge/{$token}";
 
         /** @var Response $response */
-        $response = yield (new Client(new NullCookieJar))->request($uri);
+        $response = (yield (new Client(new NullCookieJar))->request($uri));
 
         if ($payload !== trim($response->getBody())) {
             throw new AcmeException("Self verification failed, please check {$uri}");
         }
     }
 
-    public function revokeCertificate(string $pem): Promise {
-        return resolve($this->doRevokeCertificate($pem));
+    public function revokeCertificate($pem) {
+        if (!is_string($pem)) {
+            throw new \InvalidArgumentException(sprintf("\$pem must be of type string, %s given", gettype($pem)));
+        }
+
+        return \Amp\resolve($this->doRevokeCertificate($pem));
     }
 
-    private function doRevokeCertificate(string $pem): Generator {
+    private function doRevokeCertificate($pem) {
+        if (!is_string($pem)) {
+            throw new \InvalidArgumentException(sprintf("\$pem must be of type string, %s given", gettype($pem)));
+        }
+
         $begin = "CERTIFICATE-----";
         $end = "----END";
 
@@ -322,18 +413,23 @@ class AcmeService {
         $enc = new Base64UrlSafeEncoder;
 
         /** @var Response $response */
-        $response = yield $this->acmeClient->post(AcmeResource::REVOKE_CERTIFICATE, [
+        $response = (yield $this->acmeClient->post(AcmeResource::REVOKE_CERTIFICATE, [
             "certificate" => $enc->encode(base64_decode($pem)),
-        ]);
+        ]));
 
         if ($response->getStatus() === 200) {
-            return true;
+            yield new CoroutineResult(true);
+            return;
         }
 
         throw new AcmeException("Invalid response code: " . $response->getStatus() . "\n" . $response->getBody());
     }
 
-    private function parseRetryAfter(string $header) {
+    private function parseRetryAfter($header) {
+        if (!is_string($header)) {
+            throw new \InvalidArgumentException(sprintf("\$header must be of type string, %s given", gettype($header)));
+        }
+
         if (preg_match("#^[0-9]+$#", $header)) {
             return (int) $header;
         }
@@ -347,7 +443,11 @@ class AcmeService {
         return max($time - time(), 0);
     }
 
-    public function generateHttp01Payload(string $token): string {
+    public function generateHttp01Payload($token) {
+        if (!is_string($token)) {
+            throw new \InvalidArgumentException(sprintf("\$token must be of type string, %s given", gettype($token)));
+        }
+
         if (!$privateKey = openssl_pkey_get_private($this->accountKeyPair->getPrivate())) {
             throw new AcmeException("Couldn't read private key");
         }
@@ -369,31 +469,5 @@ class AcmeService {
         ];
 
         return $token . "." . $enc->encode(hash("sha256", json_encode($payload), true));
-    }
-
-    public function getAuthorizations(Registration $registration) {
-        /** @var Response $response */
-        $response = $this->acmeClient->post($registration->getAuthorizations(), [
-            "resource" => AcmeResource::REGISTRATION,
-        ]);
-
-        if ($response->getStatus() !== 200) {
-            throw new AcmeException("Invalid response code: " . $response->getStatus() . "\n" . $response->getBody());
-        }
-
-        return json_decode($response->getBody());
-    }
-
-    public function getCertificates(Registration $registration) {
-        /** @var Response $response */
-        $response = $this->acmeClient->post($registration->getAuthorizations(), [
-            "resource" => AcmeResource::REGISTRATION,
-        ]);
-
-        if ($response->getStatus() !== 200) {
-            throw new AcmeException("Invalid response code: " . $response->getStatus() . "\n" . $response->getBody());
-        }
-
-        return json_decode($response->getBody());
     }
 }
