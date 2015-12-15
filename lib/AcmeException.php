@@ -11,6 +11,7 @@ use Exception;
  */
 class AcmeException extends Exception {
     public function __construct($message, $code = null, $previous = null) {
-        parent::__construct($message, $code, $previous);
+        parent::__construct($message, 0, $previous);
+        $this->code = $code;
     }
 }
