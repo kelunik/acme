@@ -144,7 +144,7 @@ class AcmeClient {
             throw new AcmeException("GET request to {$uri} failed.", null, $e);
         }
 
-        return $response;
+        yield $response;
     }
 
     public function post($resource, array $payload) {
@@ -196,7 +196,7 @@ class AcmeClient {
             throw new AcmeException("POST request to {$uri} failed.", null, $e);
         }
 
-        return $response;
+        yield $response;
     }
 
     private function saveNonce(Response $response) {
