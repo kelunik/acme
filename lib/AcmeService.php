@@ -180,7 +180,8 @@ class AcmeService {
         ]));
 
         if ($response->getStatus() === 202) {
-            return json_decode($response->getBody());
+            yield json_decode($response->getBody());
+            return;
         }
 
         throw $this->generateException($response);
