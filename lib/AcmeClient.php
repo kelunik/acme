@@ -6,6 +6,7 @@ use Amp\Artax\Client;
 use Amp\Artax\Cookie\NullCookieJar;
 use Amp\Artax\Request;
 use Amp\Artax\Response;
+use Amp\CoroutineResult;
 use Amp\Deferred;
 use Amp\Failure;
 use Amp\Success;
@@ -144,7 +145,7 @@ class AcmeClient {
             throw new AcmeException("GET request to {$uri} failed.", null, $e);
         }
 
-        return $response;
+        yield new CoroutineResult($response);
     }
 
     public function post($resource, array $payload) {
@@ -196,7 +197,7 @@ class AcmeClient {
             throw new AcmeException("POST request to {$uri} failed.", null, $e);
         }
 
-        return $response;
+        yield new CoroutineResult($response);
     }
 
     private function saveNonce(Response $response) {
