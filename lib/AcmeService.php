@@ -239,22 +239,44 @@ class AcmeService {
             throw new AcmeException("Couldn't use private key.");
         }
 
-        $san = implode(",", array_map(function ($dns) {
-            return "DNS:" . $dns;
+        $tempFile = tempnam(sys_get_temp_dir(), "acme_openssl_config_");
+        $tempConf = <<<EOL
+[ req ]
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
+
+[ req_distinguished_name ]
+
+[ v3_req ]
+basicConstraints = CA:FALSE
+keyUsage = nonRepudiation, digitalSignature, keyEncipherment
+subjectAltName = @san
+
+[ san ]
+EOL;
+
+        $i = 0;
+
+        $san = implode("\n", array_map(function ($dns) use (&$i) {
+            $i++;
+
+            return "DNS.{$i} = {$dns}";
         }, $domains));
+
+        yield \Amp\File\put($tempFile, $tempConf . "\n" . $san . "\n");
 
         $csr = openssl_csr_new([
             "CN" => reset($domains),
             "ST" => "Germany",
             "C" => "DE",
             "O" => "Unknown",
-            "subjectAltName" => $san,
-            "basicConstraints" => "CA:FALSE",
-            "extendedKeyUsage" => "serverAuth",
         ], $privateKey, [
             "digest_alg" => "sha256",
             "req_extensions" => "v3_req",
+            "config" => $tempFile,
         ]);
+
+        yield \Amp\File\unlink($tempFile);
 
         if (!$csr) {
             // TODO: Improve error message
