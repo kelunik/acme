@@ -73,7 +73,7 @@ class AcmeService {
                 }
             }
 
-            yield new CoroutineResult(new Registration($payload->contact, $payload->agreement, $payload->authorizations, $payload->certificates));
+            yield new CoroutineResult(new Registration($response->getHeader("location"), $payload->contact, $payload->agreement, $payload->authorizations, $payload->certificates));
         }
 
         if ($response->getStatus() === 409) {
@@ -112,7 +112,7 @@ class AcmeService {
                 }
             }
 
-            yield new CoroutineResult(new Registration($payload->contact));
+            yield new CoroutineResult(new Registration($location, $payload->contact, $payload->agreement));
             return;
         }
 
