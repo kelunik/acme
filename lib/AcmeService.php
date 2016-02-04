@@ -235,9 +235,9 @@ class AcmeService {
 
     private function doRequestCertificate(KeyPair $keyPair, array $domains) {
         if (empty($domains)) {
-            throw new AcmeException('$domains array is empty!');
+            throw new AcmeException("Parameter \$domains must not be empty.");
         }
-        
+
         if (!$privateKey = openssl_pkey_get_private($keyPair->getPrivate())) {
             // TODO: Improve error message
             throw new AcmeException("Couldn't use private key.");
