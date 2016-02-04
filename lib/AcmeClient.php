@@ -170,34 +170,53 @@ class AcmeClient {
 
         $uri = (yield $this->getResourceUri($resource));
 
-        $enc = new Base64UrlSafeEncoder();
-        $jws = new SimpleJWS([
-            "alg" => "RS256",
-            "jwk" => [
-                "kty" => "RSA",
-                "n" => $enc->encode($details["rsa"]["n"]),
-                "e" => $enc->encode($details["rsa"]["e"]),
-            ],
-            "nonce" => (yield $this->getNonce($uri)),
-        ]);
+        $atempt = 0;
 
-        $payload["resource"] = isset($payload["resource"]) ? $payload["resource"] : $resource;
+        do {
+            $attempt++;
 
-        $jws->setPayload($payload);
-        $jws->sign($privateKey);
+            if ($attempt > 3) {
+                throw new AcmeException("POST request to {$uri} failed, received too many badNonce errors.");
+            }
 
-        $request = (new Request)->setMethod("POST")->setUri($uri)->setBody($jws->getTokenString());
+            $enc = new Base64UrlSafeEncoder();
+            $jws = new SimpleJWS([
+                "alg" => "RS256",
+                "jwk" => [
+                    "kty" => "RSA",
+                    "n" => $enc->encode($details["rsa"]["n"]),
+                    "e" => $enc->encode($details["rsa"]["e"]),
+                ],
+                "nonce" => (yield $this->getNonce($uri)),
+            ]);
 
-        try {
-            $response = (yield $this->http->request($request));
-            $this->saveNonce($response);
-        } catch(Exception $e) {
-            throw new AcmeException("POST request to {$uri} failed.", null, $e);
-        } catch(Throwable $e) {
-            throw new AcmeException("POST request to {$uri} failed.", null, $e);
-        }
+            $payload["resource"] = isset($payload["resource"]) ? $payload["resource"] : $resource;
 
-        yield new CoroutineResult($response);
+            $jws->setPayload($payload);
+            $jws->sign($privateKey);
+
+            $request = (new Request)->setMethod("POST")->setUri($uri)->setBody($jws->getTokenString());
+
+            try {
+                $response = (yield $this->http->request($request));
+                $this->saveNonce($response);
+
+                if ($response->getStatus() === 400) {
+                    $info = json_decode($response->getBody());
+
+                    if ($info && isset($info->type) && $info->type === "urn:acme:badNonce") {
+                        continue;
+                    }
+                }
+            } catch(Exception $e) {
+                throw new AcmeException("POST request to {$uri} failed.", null, $e);
+            } catch(Throwable $e) {
+                throw new AcmeException("POST request to {$uri} failed.", null, $e);
+            }
+
+            yield new CoroutineResult($response);
+            return;
+        } while (true);
     }
 
     private function saveNonce(Response $response) {
