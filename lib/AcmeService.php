@@ -59,6 +59,12 @@ class AcmeService {
         $response = (yield $this->acmeClient->post(AcmeResource::NEW_REGISTRATION, $payload));
 
         if ($response->getStatus() === 201) {
+            if (!$response->hasHeader("location")) {
+                throw new AcmeException("Protocol Violation: No Location Header");
+            }
+
+            list($location) = $response->getHeader("location");
+
             $payload = json_decode($response->getBody());
 
             if ($response->hasHeader("link")) {
@@ -73,7 +79,12 @@ class AcmeService {
                 }
             }
 
-            yield new CoroutineResult(new Registration($response->getHeader("location"), $payload->contact, $payload->agreement, $payload->authorizations, $payload->certificates));
+            $contact = isset($payload->contact) ? $payload->contact : [];
+            $agreement = isset($payload->agreement) ? $payload->agreement : null;
+            $authorizations = isset($payload->authorizations) ? $payload->authorizations : [];
+            $certificates = isset($payload->certificates) ? $payload->certificates : [];
+
+            yield new CoroutineResult(new Registration($location, $contact, $agreement, $authorizations, $certificates));
         }
 
         if ($response->getStatus() === 409) {
@@ -112,7 +123,10 @@ class AcmeService {
                 }
             }
 
-            yield new CoroutineResult(new Registration($location, $payload->contact, $payload->agreement));
+            $contact = isset($payload->contact) ? $payload->contact : [];
+            $agreement = isset($payload->agreement) ? $payload->agreement : null;
+
+            yield new CoroutineResult(new Registration($location, $contact, $agreement));
             return;
         }
 
