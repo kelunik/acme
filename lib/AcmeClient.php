@@ -170,7 +170,7 @@ class AcmeClient {
 
         $uri = (yield $this->getResourceUri($resource));
 
-        $atempt = 0;
+        $attempt = 0;
 
         do {
             $attempt++;
