@@ -425,8 +425,13 @@ EOL;
 
         $uri = "http://{$domain}/.well-known/acme-challenge/{$token}";
 
+        $client = new Client(new NullCookieJar);
+        $client->setOption(Client::OP_CRYPTO, [
+            "verify_peer" => false
+        ]);
+
         /** @var Response $response */
-        $response = (yield (new Client(new NullCookieJar))->request($uri));
+        $response = (yield $client->request($uri));
 
         if ($payload !== trim($response->getBody())) {
             throw new AcmeException("selfVerify failed, please check {$uri}.");
