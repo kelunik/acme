@@ -14,7 +14,7 @@ class Registration {
     private $authorizations;
     private $certificates;
 
-    public function __construct(string $location, array $contact = [], string $agreement = null, array $authorizations = [], array $certificates = []) {
+    public function __construct($location, array $contact = [], $agreement = null, array $authorizations = [], array $certificates = []) {
         $this->location = $location;
         $this->contact = $contact;
         $this->agreement = $agreement;
