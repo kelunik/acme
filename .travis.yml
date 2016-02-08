@@ -8,7 +8,7 @@ php:
 
 install:
   - composer self-update
-  - $(php -r 'if (PHP_VERSION_ID < 50600) echo "composer remove phpunit/phpunit"; else echo "true";')
+  - $(php -r 'if (PHP_VERSION_ID < 50600) echo "composer remove phpunit/phpunit --ignore-platform-reqs"; else echo "true";')
   - $(php -r 'if (PHP_VERSION_ID < 50600) echo "composer require --dev phpunit/phpunit:^4"; else echo "true";')
   - composer require satooshi/php-coveralls:dev-master
   - composer install
