@@ -8,10 +8,9 @@ php:
 
 install:
   - composer self-update
-  - $(php -r 'if (PHP_VERSION_ID < 50600) echo "composer remove phpunit/phpunit --ignore-platform-reqs"; else echo "true";')
-  - $(php -r 'if (PHP_VERSION_ID < 50600) echo "composer require --dev phpunit/phpunit:^4"; else echo "true";')
-  - composer require satooshi/php-coveralls:dev-master
-  - composer install
+  - if [[ ${TRAVIS_PHP_VERSION:0:3} == "5.5" ]]; then composer require --dev --no-update phpunit/phpunit ^4; fi
+  - composer require satooshi/php-coveralls:dev-master --ignore-platform-reqs
+  - composer install --ignore-platform-reqs
 
 script:
   - $(php -r 'if (PHP_MAJOR_VERSION >= 7) echo "phpdbg -qrr"; else echo "php";') vendor/bin/phpunit --coverage-text --coverage-clover build/logs/clover.xml
