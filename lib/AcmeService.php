@@ -19,11 +19,27 @@ class AcmeService {
     private $acmeClient;
     private $accountKeyPair;
 
+    /**
+     * AcmeService constructor.
+     *
+     * @api
+     * @param AcmeClient $acmeClient ACME client
+     * @param KeyPair    $accountKeyPair account key pair
+     */
     public function __construct(AcmeClient $acmeClient, KeyPair $accountKeyPair) {
         $this->acmeClient = $acmeClient;
         $this->accountKeyPair = $accountKeyPair;
     }
 
+    /**
+     * Registers a new account on the server.
+     *
+     * @api
+     * @param string      $email e-mail address for contact
+     * @param string|null $agreement agreement URI or null if not agreed yet
+     * @return \Amp\Promise resolves to an Registration object
+     * @throws AcmeException If something went wrong.
+     */
     public function register($email, $agreement = null) {
         if (!is_string($email)) {
             throw new InvalidArgumentException(sprintf("\$email must be of type string, %s given.", gettype($email)));
@@ -133,6 +149,14 @@ class AcmeService {
         throw $this->generateException($response);
     }
 
+    /**
+     * Requests challenges for a given DNS name.
+     *
+     * @api
+     * @param string $dns DNS name to request challenge for
+     * @return \Amp\Promise resolves to an array of challenges
+     * @throws AcmeException If something went wrong.
+     */
     public function requestChallenges($dns) {
         if (!is_string($dns)) {
             throw new InvalidArgumentException(sprintf("\$dns must be of type string, %s given.", gettype($dns)));
@@ -166,6 +190,15 @@ class AcmeService {
         throw $this->generateException($response);
     }
 
+    /**
+     * Answers a challenge and signals that the CA should validate it.
+     *
+     * @api
+     * @param string $location URI of the challenge
+     * @param string $keyAuth key authorization
+     * @return \Amp\Promise resolves to the decoded JSON response
+     * @throws AcmeException If something went wrong.
+     */
     public function answerChallenge($location, $keyAuth) {
         if (!is_string($location)) {
             throw new InvalidArgumentException(sprintf("\$location must be of type string, %s given.", gettype($location)));
@@ -201,6 +234,14 @@ class AcmeService {
         throw $this->generateException($response);
     }
 
+    /**
+     * Polls until a challenge has been validated.
+     *
+     * @api
+     * @param string $location URI of the challenge
+     * @return \Amp\Promise resolves to null
+     * @throws AcmeException
+     */
     public function pollForChallenge($location) {
         if (!is_string($location)) {
             throw new InvalidArgumentException(sprintf("\$location must be of type string, %s given.", gettype($location)));
@@ -243,6 +284,15 @@ class AcmeService {
         } while (1);
     }
 
+    /**
+     * Requests a new certificate.
+     *
+     * @api
+     * @param KeyPair $keyPair domain key pair
+     * @param array   $domains domains to include in the certificate (first will be used as common name)
+     * @return \Amp\Promise resolves to the URI where the certificate will be provided
+     * @throws AcmeException If something went wrong.
+     */
     public function requestCertificate(KeyPair $keyPair, array $domains) {
         return \Amp\resolve($this->doRequestCertificate($keyPair, $domains));
     }
@@ -328,6 +378,14 @@ EOL;
         throw $this->generateException($response);
     }
 
+    /**
+     * Polls for a certificate.
+     *
+     * @api
+     * @param string $location URI of the certificate
+     * @return \Amp\Promise resolves to the complete certificate chain as array of PEM encoded certificates
+     * @throws AcmeException If something went wrong.
+     */
     public function pollForCertificate($location) {
         if (!is_string($location)) {
             throw new InvalidArgumentException(sprintf("\$location must be of type string, %s given.", gettype($location)));
@@ -394,6 +452,18 @@ EOL;
         throw new AcmeException("Couldn't fetch certificate");
     }
 
+    /**
+     * Verifies a HTTP-01 challenge.
+     *
+     * Can be used to verify a challenge before requesting validation from a CA to catch errors early.
+     *
+     * @api
+     * @param string $domain domain to verify
+     * @param string $token challenge token
+     * @param string $payload expected payload
+     * @return \Amp\Promise resolves to null
+     * @throws AcmeException If the challenge could not be verified.
+     */
     public function selfVerify($domain, $token, $payload) {
         if (!is_string($domain)) {
             throw new InvalidArgumentException(sprintf("\$domain must be of type string, %s given.", gettype($domain)));
@@ -431,15 +501,23 @@ EOL;
         $response = (yield $client->request($uri, [
             Client::OP_CRYPTO => [
                 "verify_peer" => false,
-                "verify_peer_name" => false
-            ]
+                "verify_peer_name" => false,
+            ],
         ]));
 
-        if ($payload !== trim($response->getBody())) {
+        if (rtrim($payload) !== rtrim($response->getBody())) {
             throw new AcmeException("selfVerify failed, please check {$uri}.");
         }
     }
 
+    /**
+     * Revokes a certificate.
+     *
+     * @api
+     * @param string $pem PEM encoded certificate
+     * @return \Amp\Promise resolves to true
+     * @throws AcmeException If something went wrong.
+     */
     public function revokeCertificate($pem) {
         if (!is_string($pem)) {
             throw new InvalidArgumentException(sprintf("\$pem must be of type string, %s given.", gettype($pem)));
@@ -492,6 +570,14 @@ EOL;
         return max($time - time(), 0);
     }
 
+    /**
+     * Generates the payload which must be provided in HTTP-01 challenges.
+     *
+     * @api
+     * @param string $token challenge token
+     * @return string payload to be provided at /.well-known/acme-challenge/$token
+     * @throws AcmeException If something went wrong.
+     */
     public function generateHttp01Payload($token) {
         if (!is_string($token)) {
             throw new InvalidArgumentException(sprintf("\$token must be of type string, %s given.", gettype($token)));

@@ -8,6 +8,13 @@ namespace Kelunik\Acme;
  * @package Kelunik\Acme
  */
 class OpenSSLKeyGenerator implements KeyGenerator {
+    /**
+     * Generates a new key pair with the given length in bits.
+     *
+     * @api
+     * @param int $bits length of the key
+     * @return KeyPair generated key pair
+     */
     public function generate($bits = 2048) {
         if (!is_int($bits)) {
             throw new \InvalidArgumentException(sprintf("\$bits must be of type int, %s given", gettype($bits)));
