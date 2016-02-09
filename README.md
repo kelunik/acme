@@ -5,7 +5,7 @@
 
 `kelunik/acme` is a non-blocking implementation of the [ACME](https://github.com/ietf-wg-acme/acme) protocol based on the [`amp`](https://github.com/amphp/amp) concurrency framework.
 
-> **Note**: If you're looking for a PHP client, have a look at https://github.com/kelunik/acme-client which is based on this library.
+> If you're looking for a PHP client, have a look at https://github.com/kelunik/acme-client which is based on this library.
 
 **Required PHP Version**
 
@@ -17,10 +17,19 @@
 composer require kelunik/acme
 ```
 
+**Documentation**
+
+The library is fully documented using PHPDoc.
+
+**[API Reference](http://blog.kelunik.com/docs/acme/)**
+
+**Implementations**
+
+ - [`kelunik/acme-client`](https://github.com/kelunik/acme-client)
+ - [`kelunik/aerys-acme`](https://github.com/kelunik/aerys-acme)
+ - [`Petertjuh360/da-letsencrypt`](https://github.com/Petertjuh360/da-letsencrypt)
+
 **Usage**
 
-To interact with this library, you mainly have to use `Kelunik\Acme\AcmeService` and pass a `Kelunik\Acme\AcmeAdapter` object. There's an implementation for [`amphp/aerys`](https://github.com/amphp/aerys) which you can look at: [`kelunik/aerys-acme`](https://github.com/kelunik/aerys-acme).
-
-----
-
-If you're not familiar with promises and `amp` yet, read the [blog post to get started](http://blog.kelunik.com/2015/09/20/getting-started-with-amp.html). You can always use `Amp\wait` to simply use async libraries in a blocking world.
+If you're not familiar with promises and `amphp/amp` yet, read my [blog post to get started](http://blog.kelunik.com/2015/09/20/getting-started-with-amp.html).
+You can always use `Amp\wait` to use this async library in synchronious code.
