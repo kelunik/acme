@@ -5,7 +5,7 @@
 
 `kelunik/acme` is a non-blocking implementation of the [ACME](https://github.com/ietf-wg-acme/acme) protocol based on the [`amp`](https://github.com/amphp/amp) concurrency framework.
 
-> If you're looking for a PHP client, have a look at https://github.com/kelunik/acme-client which is based on this library.
+> If you're looking for a PHP client, have a look at [`kelunik/acme-client`](https://github.com/kelunik/acme-client) which is based on this library.
 
 **Required PHP Version**
 
@@ -17,11 +17,9 @@
 composer require kelunik/acme
 ```
 
-**Documentation**
+**[Documentation](http://blog.kelunik.com/docs/acme/)**
 
 The library is fully documented using PHPDoc.
-
-**[API Reference](http://blog.kelunik.com/docs/acme/)**
 
 **Implementations**
 
