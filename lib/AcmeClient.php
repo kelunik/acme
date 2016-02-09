@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * This file is part of the ACME package.
+ *
+ * @copyright Copyright (c) 2015-2016, Niklas Keller
+ * @license MIT
+ */
+
 namespace Kelunik\Acme;
 
 use Amp\Artax\Client;
@@ -17,15 +24,35 @@ use Namshi\JOSE\SimpleJWS;
 use Throwable;
 
 /**
+ * Low level ACME client.
+ *
  * @author Niklas Keller <me@kelunik.com>
- * @copyright Copyright (c) 2015, Niklas Keller
  * @package Kelunik\Acme
  */
 class AcmeClient {
+    /**
+     * @var Client HTTP client
+     */
     private $http;
+
+    /**
+     * @var KeyPair account key pair
+     */
     private $keyPair;
+
+    /**
+     * @var string dictionary URI of the ACME server
+     */
     private $dictionaryUri;
+
+    /**
+     * @var array dictionary contents of the ACME server
+     */
     private $dictionary;
+
+    /**
+     * @var array saved nonces for use in future requests
+     */
     private $nonces;
 
     /**

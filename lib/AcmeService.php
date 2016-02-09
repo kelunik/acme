@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * This file is part of the ACME package.
+ *
+ * @copyright Copyright (c) 2015-2016, Niklas Keller
+ * @license MIT
+ */
+
 namespace Kelunik\Acme;
 
 use Amp\Artax\Client;
@@ -11,12 +18,20 @@ use InvalidArgumentException;
 use Namshi\JOSE\Base64\Base64UrlSafeEncoder;
 
 /**
+ * High level ACME client.
+ *
  * @author Niklas Keller <me@kelunik.com>
- * @copyright Copyright (c) 2015, Niklas Keller
  * @package Kelunik\Acme
  */
 class AcmeService {
+    /**
+     * @var AcmeClient low level ACME client
+     */
     private $acmeClient;
+
+    /**
+     * @var KeyPair account key pair
+     */
     private $accountKeyPair;
 
     /**
@@ -37,7 +52,7 @@ class AcmeService {
      * @api
      * @param string      $email e-mail address for contact
      * @param string|null $agreement agreement URI or null if not agreed yet
-     * @return \Amp\Promise resolves to an Registration object
+     * @return \Amp\Promise resolves to a Registration object
      * @throws AcmeException If something went wrong.
      */
     public function register($email, $agreement = null) {
@@ -52,6 +67,14 @@ class AcmeService {
         return \Amp\resolve($this->doRegister($email, $agreement));
     }
 
+    /**
+     * Registers a new account on the server.
+     *
+     * @param string      $email e-mail address for contact
+     * @param string|null $agreement agreement URI or null if not agreed yet
+     * @return \Generator coroutine resolved by Amp returning a Registration object
+     * @throws AcmeException If something went wrong.
+     */
     private function doRegister($email, $agreement = null) {
         if (!is_string($email)) {
             throw new InvalidArgumentException(sprintf("\$email must be of type string, %s given.", gettype($email)));
@@ -165,6 +188,13 @@ class AcmeService {
         return \Amp\resolve($this->doRequestChallenges($dns));
     }
 
+    /**
+     * Requests challenges for a given DNS name.
+     *
+     * @param string $dns DNS name to request challenge for
+     * @return \Generator coroutine resolved by Amp returning an array of challenges
+     * @throws AcmeException If something went wrong.
+     */
     private function doRequestChallenges($dns) {
         if (!is_string($dns)) {
             throw new InvalidArgumentException(sprintf("\$dns must be of type string, %s given.", gettype($dns)));
@@ -211,6 +241,14 @@ class AcmeService {
         return \Amp\resolve($this->doAnswerChallenge($location, $keyAuth));
     }
 
+    /**
+     * Answers a challenge and signals that the CA should validate it.
+     *
+     * @param string $location URI of the challenge
+     * @param string $keyAuth key authorization
+     * @return \Generator coroutine resolved by Amp returning the decoded JSON response
+     * @throws AcmeException If something went wrong.
+     */
     private function doAnswerChallenge($location, $keyAuth) {
         if (!is_string($location)) {
             throw new InvalidArgumentException(sprintf("\$location must be of type string, %s given.", gettype($location)));
@@ -250,6 +288,13 @@ class AcmeService {
         return \Amp\resolve($this->doPollForChallenge($location));
     }
 
+    /**
+     * Polls until a challenge has been validated.
+     *
+     * @param string $location URI of the challenge
+     * @return \Generator coroutine resolved by Amp returning null
+     * @throws AcmeException
+     */
     private function doPollForChallenge($location) {
         if (!is_string($location)) {
             throw new InvalidArgumentException(sprintf("\$location must be of type string, %s given.", gettype($location)));
@@ -297,6 +342,14 @@ class AcmeService {
         return \Amp\resolve($this->doRequestCertificate($keyPair, $domains));
     }
 
+    /**
+     * Requests a new certificate.
+     *
+     * @param KeyPair $keyPair domain key pair
+     * @param array   $domains domains to include in the certificate (first will be used as common name)
+     * @return \Generator coroutine resolved by Amp returning the URI where the certificate will be provided
+     * @throws AcmeException If something went wrong.
+     */
     private function doRequestCertificate(KeyPair $keyPair, array $domains) {
         if (empty($domains)) {
             throw new AcmeException("Parameter \$domains must not be empty.");
@@ -394,6 +447,13 @@ EOL;
         return \Amp\resolve($this->doPollForCertificate($location));
     }
 
+    /**
+     * Polls for a certificate.
+     *
+     * @param string $location URI of the certificate
+     * @return \Generator coroutine resolved by Amp returning the complete certificate chain as array of PEM encoded certificates
+     * @throws AcmeException If something went wrong.
+     */
     private function doPollForCertificate($location) {
         if (!is_string($location)) {
             throw new InvalidArgumentException(sprintf("\$location must be of type string, %s given.", gettype($location)));
@@ -480,6 +540,17 @@ EOL;
         return \Amp\resolve($this->doSelfVerify($domain, $token, $payload));
     }
 
+    /**
+     * Verifies a HTTP-01 challenge.
+     *
+     * Can be used to verify a challenge before requesting validation from a CA to catch errors early.
+     *
+     * @param string $domain domain to verify
+     * @param string $token challenge token
+     * @param string $payload expected payload
+     * @return \Generator coroutine resolved by Amp returning null
+     * @throws AcmeException If the challenge could not be verified.
+     */
     private function doSelfVerify($domain, $token, $payload) {
         if (!is_string($domain)) {
             throw new InvalidArgumentException(sprintf("\$domain must be of type string, %s given.", gettype($domain)));
@@ -526,6 +597,13 @@ EOL;
         return \Amp\resolve($this->doRevokeCertificate($pem));
     }
 
+    /**
+     * Revokes a certificate.
+     *
+     * @param string $pem PEM encoded certificate
+     * @return \Generator coroutine resolved by Amp returning true
+     * @throws AcmeException If something went wrong.
+     */
     private function doRevokeCertificate($pem) {
         if (!is_string($pem)) {
             throw new InvalidArgumentException(sprintf("\$pem must be of type string, %s given.", gettype($pem)));
@@ -552,6 +630,13 @@ EOL;
         throw $this->generateException($response);
     }
 
+    /**
+     * Parses a retry header into seconds to wait until a request should be retried.
+     *
+     * @param string $header header value
+     * @return int seconds to wait until retry
+     * @throws AcmeException If the header value cannot be parsed.
+     */
     private function parseRetryAfter($header) {
         if (!is_string($header)) {
             throw new InvalidArgumentException(sprintf("\$header must be of type string, %s given.", gettype($header)));
@@ -606,6 +691,12 @@ EOL;
         return $token . "." . $enc->encode(hash("sha256", json_encode($payload), true));
     }
 
+    /**
+     * Generates a new exception using the response to provide details.
+     *
+     * @param Response $response HTTP response to generate the exception from
+     * @return AcmeException exception generated from the response body
+     */
     private function generateException(Response $response) {
         $body = $response->getBody();
         $status = $response->getStatus();

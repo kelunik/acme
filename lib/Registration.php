@@ -1,17 +1,44 @@
 <?php
 
+/**
+ * This file is part of the ACME package.
+ *
+ * @copyright Copyright (c) 2015-2016, Niklas Keller
+ * @license MIT
+ */
+
 namespace Kelunik\Acme;
 
 /**
+ * ACME registration object.
+ *
  * @author Niklas Keller <me@kelunik.com>
- * @copyright Copyright (c) 2015, Niklas Keller
  * @package Kelunik\Acme
  */
 class Registration {
+    /**
+     * @var string URI of the registration object
+     */
     private $location;
+
+    /**
+     * @var array all contacts registered with the server
+     */
     private $contact;
+
+    /**
+     * @var null|string URI to the agreement, if agreed
+     */
     private $agreement;
+
+    /**
+     * @var null|string URI to retrieve authorizations if provided
+     */
     private $authorizations;
+
+    /**
+     * @var null|string URI to retrieve certificates if provided
+     */
     private $certificates;
 
     /**
@@ -32,6 +59,8 @@ class Registration {
     }
 
     /**
+     * Gets the location URI.
+     *
      * @api
      * @return string URI to retrieve this registration object
      */
@@ -40,6 +69,8 @@ class Registration {
     }
 
     /**
+     * Gets the contact addresses.
+     *
      * @api
      * @return array contacts registered with the server
      */
@@ -48,6 +79,8 @@ class Registration {
     }
 
     /**
+     * Gets the agreement URI.
+     *
      * @api
      * @return null|string URI to the agreement, if agreed, otherwise <code>null</code>
      */
@@ -56,6 +89,8 @@ class Registration {
     }
 
     /**
+     * Gets the authorizations URI.
+     *
      * @api
      * @return null|string URI to retrieve authorizations or null
      */
@@ -64,6 +99,8 @@ class Registration {
     }
 
     /**
+     * Gets the certificates URI.
+     *
      * @api
      * @return null|string URI to retrieve certficates or null
      */

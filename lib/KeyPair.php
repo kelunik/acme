@@ -1,14 +1,29 @@
 <?php
 
+/**
+ * This file is part of the ACME package.
+ *
+ * @copyright Copyright (c) 2015-2016, Niklas Keller
+ * @license MIT
+ */
+
 namespace Kelunik\Acme;
 
 /**
+ * RSA key pair.
+ *
  * @author Niklas Keller <me@kelunik.com>
- * @copyright Copyright (c) 2015, Niklas Keller
  * @package Kelunik\Acme
  */
 class KeyPair {
+    /**
+     * @var string private key (PEM encoded)
+     */
     private $private;
+
+    /**
+     * @var string public key (PEM encoded)
+     */
     private $public;
 
     /**
@@ -31,6 +46,8 @@ class KeyPair {
     }
 
     /**
+     * Gets the private key.
+     *
      * @api
      * @return string private key (PEM encoded)
      */
@@ -39,6 +56,8 @@ class KeyPair {
     }
 
     /**
+     * Gets the public key.
+     *
      * @api
      * @return string public key (PEM encoded)
      */

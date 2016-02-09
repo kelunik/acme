@@ -1,12 +1,20 @@
 <?php
 
+/**
+ * This file is part of the ACME package.
+ *
+ * @copyright Copyright (c) 2015-2016, Niklas Keller
+ * @license MIT
+ */
+
 namespace Kelunik\Acme;
 
 use Exception;
 
 /**
+ * Generic ACME exception.
+ *
  * @author Niklas Keller <me@kelunik.com>
- * @copyright Copyright (c) 2015, Niklas Keller
  * @package Kelunik\Acme
  */
 class AcmeException extends Exception {
