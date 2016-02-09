@@ -20,7 +20,7 @@ class SelfVerifyTest extends \PHPUnit_Framework_TestCase {
             $token = "invalid-common-name";
 
             /** @var Response $payloadResponse */
-            $payloadResponse = yield $http->request("http://blog.kelunik.com/robots.txt");
+            $payloadResponse = (yield $http->request("http://blog.kelunik.com/robots.txt"));
             $payload = trim($payloadResponse->getBody());
 
             try {
