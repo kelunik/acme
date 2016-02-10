@@ -5,7 +5,7 @@ namespace Kelunik\Acme;
 use Amp\Artax\Client;
 use Amp\Artax\Response;
 
-class SelfVerifyTest extends \PHPUnit_Framework_TestCase {
+class Http01VerificationTest extends \PHPUnit_Framework_TestCase {
     /**
      * @test
      */
@@ -24,7 +24,7 @@ class SelfVerifyTest extends \PHPUnit_Framework_TestCase {
             $payload = trim($payloadResponse->getBody());
 
             try {
-                yield $service->selfVerify("kelunik.com", $token, $payload);
+                yield $service->verifyHttp01Challenge("kelunik.com", $token, $payload);
                 $this->assertTrue(true);
             } catch (\Throwable $e) {
                 $this->fail("Didn't ignore invalid common name. " . $e);
@@ -52,7 +52,7 @@ class SelfVerifyTest extends \PHPUnit_Framework_TestCase {
             /** @var Response $payloadResponse */
             $payload = "foobar";
 
-            yield $service->selfVerify("kelunik.com", $token, $payload);
+            yield $service->verifyHttp01Challenge("kelunik.com", $token, $payload);
 
             \Amp\stop();
         });
