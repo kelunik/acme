@@ -30,20 +30,13 @@ class AcmeService {
     private $acmeClient;
 
     /**
-     * @var KeyPair account key pair
-     */
-    private $accountKeyPair;
-
-    /**
      * AcmeService constructor.
      *
      * @api
      * @param AcmeClient $acmeClient ACME client
-     * @param KeyPair    $accountKeyPair account key pair
      */
-    public function __construct(AcmeClient $acmeClient, KeyPair $accountKeyPair) {
+    public function __construct(AcmeClient $acmeClient) {
         $this->acmeClient = $acmeClient;
-        $this->accountKeyPair = $accountKeyPair;
     }
 
     /**
@@ -558,16 +551,17 @@ EOL;
      * Generates the payload which must be provided in HTTP-01 challenges.
      *
      * @api
-     * @param string $token challenge token
+     * @param KeyPair $accountKeyPair account key pair
+     * @param string  $token challenge token
      * @return string payload to be provided at /.well-known/acme-challenge/$token
      * @throws AcmeException If something went wrong.
      */
-    public function generateHttp01Payload($token) {
+    public function generateHttp01Payload(KeyPair $accountKeyPair, $token) {
         if (!is_string($token)) {
             throw new InvalidArgumentException(sprintf("\$token must be of type string, %s given.", gettype($token)));
         }
 
-        if (!$privateKey = openssl_pkey_get_private($this->accountKeyPair->getPrivate())) {
+        if (!$privateKey = openssl_pkey_get_private($accountKeyPair->getPrivate())) {
             throw new AcmeException("Couldn't read private key.");
         }
 
@@ -602,8 +596,8 @@ EOL;
      * @return \Amp\Promise resolves to null
      * @throws AcmeException If the challenge could not be verified.
      */
-    public function selfVerify($domain, $token, $payload) {
-        return \Amp\resolve($this->doSelfVerify($domain, $token, $payload));
+    public function verifyHttp01Challenge($domain, $token, $payload) {
+        return \Amp\resolve($this->doVerifyHttp01Challenge($domain, $token, $payload));
     }
 
     /**
@@ -617,7 +611,7 @@ EOL;
      * @return \Generator coroutine resolved by Amp returning null
      * @throws AcmeException If the challenge could not be verified.
      */
-    private function doSelfVerify($domain, $token, $payload) {
+    private function doVerifyHttp01Challenge($domain, $token, $payload) {
         if (!is_string($domain)) {
             throw new InvalidArgumentException(sprintf("\$domain must be of type string, %s given.", gettype($domain)));
         }
