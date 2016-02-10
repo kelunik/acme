@@ -190,10 +190,6 @@ class AcmeClient {
      * @throws AcmeException If the request failed.
      */
     public function get($resource) {
-        if (!is_string($resource)) {
-            throw new InvalidArgumentException(sprintf("\$resource must be of type string, %s given.", gettype($resource)));
-        }
-
         return \Amp\resolve($this->doGet($resource));
     }
 
@@ -233,10 +229,6 @@ class AcmeClient {
      * @throws AcmeException If the request failed.
      */
     public function post($resource, array $payload) {
-        if (!is_string($resource)) {
-            throw new InvalidArgumentException(sprintf("\$resource must be of type string, %s given.", gettype($resource)));
-        }
-
         return \Amp\resolve($this->doPost($resource, $payload));
     }
 

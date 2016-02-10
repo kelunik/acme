@@ -56,14 +56,6 @@ class AcmeService {
      * @throws AcmeException If something went wrong.
      */
     public function register($email, $agreement = null) {
-        if (!is_string($email)) {
-            throw new InvalidArgumentException(sprintf("\$email must be of type string, %s given.", gettype($email)));
-        }
-
-        if ($agreement !== null && !is_string($agreement)) {
-            throw new InvalidArgumentException(sprintf("\$agreement must be of type string, %s given.", gettype($agreement)));
-        }
-
         return \Amp\resolve($this->doRegister($email, $agreement));
     }
 
@@ -181,10 +173,6 @@ class AcmeService {
      * @throws AcmeException If something went wrong.
      */
     public function requestChallenges($dns) {
-        if (!is_string($dns)) {
-            throw new InvalidArgumentException(sprintf("\$dns must be of type string, %s given.", gettype($dns)));
-        }
-
         return \Amp\resolve($this->doRequestChallenges($dns));
     }
 
@@ -230,14 +218,6 @@ class AcmeService {
      * @throws AcmeException If something went wrong.
      */
     public function answerChallenge($location, $keyAuth) {
-        if (!is_string($location)) {
-            throw new InvalidArgumentException(sprintf("\$location must be of type string, %s given.", gettype($location)));
-        }
-
-        if (!is_string($keyAuth)) {
-            throw new InvalidArgumentException(sprintf("\$keyAuth must be of type string, %s given.", gettype($keyAuth)));
-        }
-
         return \Amp\resolve($this->doAnswerChallenge($location, $keyAuth));
     }
 
@@ -281,10 +261,6 @@ class AcmeService {
      * @throws AcmeException
      */
     public function pollForChallenge($location) {
-        if (!is_string($location)) {
-            throw new InvalidArgumentException(sprintf("\$location must be of type string, %s given.", gettype($location)));
-        }
-
         return \Amp\resolve($this->doPollForChallenge($location));
     }
 
@@ -440,10 +416,6 @@ EOL;
      * @throws AcmeException If something went wrong.
      */
     public function pollForCertificate($location) {
-        if (!is_string($location)) {
-            throw new InvalidArgumentException(sprintf("\$location must be of type string, %s given.", gettype($location)));
-        }
-
         return \Amp\resolve($this->doPollForCertificate($location));
     }
 
@@ -513,75 +485,6 @@ EOL;
     }
 
     /**
-     * Verifies a HTTP-01 challenge.
-     *
-     * Can be used to verify a challenge before requesting validation from a CA to catch errors early.
-     *
-     * @api
-     * @param string $domain domain to verify
-     * @param string $token challenge token
-     * @param string $payload expected payload
-     * @return \Amp\Promise resolves to null
-     * @throws AcmeException If the challenge could not be verified.
-     */
-    public function selfVerify($domain, $token, $payload) {
-        if (!is_string($domain)) {
-            throw new InvalidArgumentException(sprintf("\$domain must be of type string, %s given.", gettype($domain)));
-        }
-
-        if (!is_string($token)) {
-            throw new InvalidArgumentException(sprintf("\$token must be of type string, %s given.", gettype($token)));
-        }
-
-        if (!is_string($payload)) {
-            throw new InvalidArgumentException(sprintf("\$payload must be of type string, %s given.", gettype($payload)));
-        }
-
-        return \Amp\resolve($this->doSelfVerify($domain, $token, $payload));
-    }
-
-    /**
-     * Verifies a HTTP-01 challenge.
-     *
-     * Can be used to verify a challenge before requesting validation from a CA to catch errors early.
-     *
-     * @param string $domain domain to verify
-     * @param string $token challenge token
-     * @param string $payload expected payload
-     * @return \Generator coroutine resolved by Amp returning null
-     * @throws AcmeException If the challenge could not be verified.
-     */
-    private function doSelfVerify($domain, $token, $payload) {
-        if (!is_string($domain)) {
-            throw new InvalidArgumentException(sprintf("\$domain must be of type string, %s given.", gettype($domain)));
-        }
-
-        if (!is_string($token)) {
-            throw new InvalidArgumentException(sprintf("\$token must be of type string, %s given.", gettype($token)));
-        }
-
-        if (!is_string($payload)) {
-            throw new InvalidArgumentException(sprintf("\$payload must be of type string, %s given.", gettype($payload)));
-        }
-
-        $uri = "http://{$domain}/.well-known/acme-challenge/{$token}";
-
-        $client = new Client(new NullCookieJar);
-
-        /** @var Response $response */
-        $response = (yield $client->request($uri, [
-            Client::OP_CRYPTO => [
-                "verify_peer" => false,
-                "verify_peer_name" => false,
-            ],
-        ]));
-
-        if (rtrim($payload) !== rtrim($response->getBody())) {
-            throw new AcmeException("selfVerify failed, please check {$uri}.");
-        }
-    }
-
-    /**
      * Revokes a certificate.
      *
      * @api
@@ -590,10 +493,6 @@ EOL;
      * @throws AcmeException If something went wrong.
      */
     public function revokeCertificate($pem) {
-        if (!is_string($pem)) {
-            throw new InvalidArgumentException(sprintf("\$pem must be of type string, %s given.", gettype($pem)));
-        }
-
         return \Amp\resolve($this->doRevokeCertificate($pem));
     }
 
@@ -689,6 +588,63 @@ EOL;
         ];
 
         return $token . "." . $enc->encode(hash("sha256", json_encode($payload), true));
+    }
+
+    /**
+     * Verifies a HTTP-01 challenge.
+     *
+     * Can be used to verify a challenge before requesting validation from a CA to catch errors early.
+     *
+     * @api
+     * @param string $domain domain to verify
+     * @param string $token challenge token
+     * @param string $payload expected payload
+     * @return \Amp\Promise resolves to null
+     * @throws AcmeException If the challenge could not be verified.
+     */
+    public function selfVerify($domain, $token, $payload) {
+        return \Amp\resolve($this->doSelfVerify($domain, $token, $payload));
+    }
+
+    /**
+     * Verifies a HTTP-01 challenge.
+     *
+     * Can be used to verify a challenge before requesting validation from a CA to catch errors early.
+     *
+     * @param string $domain domain to verify
+     * @param string $token challenge token
+     * @param string $payload expected payload
+     * @return \Generator coroutine resolved by Amp returning null
+     * @throws AcmeException If the challenge could not be verified.
+     */
+    private function doSelfVerify($domain, $token, $payload) {
+        if (!is_string($domain)) {
+            throw new InvalidArgumentException(sprintf("\$domain must be of type string, %s given.", gettype($domain)));
+        }
+
+        if (!is_string($token)) {
+            throw new InvalidArgumentException(sprintf("\$token must be of type string, %s given.", gettype($token)));
+        }
+
+        if (!is_string($payload)) {
+            throw new InvalidArgumentException(sprintf("\$payload must be of type string, %s given.", gettype($payload)));
+        }
+
+        $uri = "http://{$domain}/.well-known/acme-challenge/{$token}";
+
+        $client = new Client(new NullCookieJar);
+
+        /** @var Response $response */
+        $response = (yield $client->request($uri, [
+            Client::OP_CRYPTO => [
+                "verify_peer" => false,
+                "verify_peer_name" => false,
+            ],
+        ]));
+
+        if (rtrim($payload) !== rtrim($response->getBody())) {
+            throw new AcmeException("selfVerify failed, please check {$uri}.");
+        }
     }
 
     /**
