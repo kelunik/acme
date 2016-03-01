@@ -289,7 +289,7 @@ class AcmeClient {
                 if ($response->getStatus() === 400) {
                     $info = json_decode($response->getBody());
 
-                    if ($info && isset($info->type) && $info->type === "urn:acme:badNonce") {
+                    if ($info && isset($info->type) && ($info->type === "urn:acme:badNonce" or $info->type === "urn:acme:error:badNonce")) {
                         continue;
                     }
                 }
