@@ -642,6 +642,55 @@ EOL;
     }
 
     /**
+     * Verifies a DNS-01 Challenge.
+     *
+     * Can be used to verify a challenge before requesting validation from a CA to catch errors early.
+     *
+     * @api
+     * @param string $domain domain to verify
+     * @param string $dnsPayload expected payload
+     * @return \Amp\Promise resolves to the DNS entry found
+     * @throws AcmeException If the challenge could not be verified.
+     */
+    public function verifyDns01Challenge($domain, $dnsPayload) {
+        return \Amp\resolve($this->doVerifyDns01Challenge($domain, $dnsPayload));
+    }
+
+    /**
+     * Verifies a DNS-01 Challenge.
+     *
+     * Can be used to verify a challenge before requesting validation from a CA to catch errors early.
+     *
+     * @param string $domain domain to verify
+     * @param string $dnsPayload expected payload
+     * @return \Generator coroutine resolved to the DNS entry found
+     * @throws AcmeException If the challenge could not be verified.
+     */
+    private function doVerifyDns01Challenge($domain, $dnsPayload) {
+        if (!is_string($domain)) {
+            throw new InvalidArgumentException(sprintf("\$domain must be of type string, %s given.", gettype($domain)));
+        }
+
+        if (!is_string($dnsPayload)) {
+            throw new InvalidArgumentException(sprintf("\$dnsPayload must be of type string, %s given.", gettype($dnsPayload)));
+        }
+
+        $uri = "_acme-challenge." . $domain;
+        $dnsResponse = dns_get_record($uri);
+
+        /* Throw error if no DNS record is found */
+        if (!$dnsResponse) {
+            throw new AcmeException("selfVerify failed, no DNS record found for expected domain: _acme-challenge." . $domain);
+        }
+        /* Throw error if no TXT record exists or if value of TXT record does not match expected payload */
+        if (!array_key_exists("txt", $dnsResponse[0]) or $dnsResponse[0]["txt"] !== $dnsPayload) {
+            throw new AcmeException("selfVerify failed, please check DNS record under {$uri}.");
+        }
+        yield new CoroutineResult($dnsResponse);
+        return;
+    }
+
+    /**
      * Generates a new exception using the response to provide details.
      *
      * @param Response $response HTTP response to generate the exception from
