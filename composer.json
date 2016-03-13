@@ -1,6 +1,14 @@
 {
     "name": "kelunik/acme",
     "description": "ACME library written in PHP.",
+    "keywords": [
+        "ACME",
+        "letsencrypt",
+        "https",
+        "encryption",
+        "ssl",
+        "tls"
+    ],
     "require": {
         "amphp/artax": "^2",
         "namshi/jose": "^6",
