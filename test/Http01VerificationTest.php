@@ -6,6 +6,10 @@ use Amp\Artax\Client;
 use Amp\Artax\Response;
 
 class Http01VerificationTest extends \PHPUnit_Framework_TestCase {
+    public function setUp() {
+        \Amp\reactor(\Amp\driver());
+    }
+
     /**
      * @test
      */
@@ -41,7 +45,7 @@ class Http01VerificationTest extends \PHPUnit_Framework_TestCase {
      * @expectedException \Kelunik\Acme\AcmeException
      * @expectedExceptionMessage selfVerify failed
      */
-    public function failsOnDiffPayload() {
+    public function failsOnWrongPayload() {
         \Amp\run(function() {
             $keyPair = (new OpenSSLKeyGenerator())->generate();
             $client = new AcmeClient("https://acme-staging.api.letsencrypt.org/directory", $keyPair);

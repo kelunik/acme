@@ -2,7 +2,12 @@
 
 namespace Kelunik\Acme;
 
+use Amp\Artax\Response;
+
 class Dns01VerificationTest extends \PHPUnit_Framework_TestCase {
+    public function setUp() {
+        \Amp\reactor(\Amp\driver());
+    }
 
     /**
      * @test
@@ -19,9 +24,9 @@ class Dns01VerificationTest extends \PHPUnit_Framework_TestCase {
             try {
             	yield $service->verifyDns01Challenge("google.com", $payload);
             } catch (AcmeException $e) {
-            	$this->assertEquals($e->getMessage(), "selfVerify failed, no DNS record found for expected domain: _acme-challenge.google.com");
+            	$this->assertEquals($e->getMessage(), "Verification failed, no DNS record found for expected domain: _acme-challenge.google.com");
             } finally {
-				\Amp\stop();
+                \Amp\stop();
 			}
         });
     }
@@ -40,8 +45,9 @@ class Dns01VerificationTest extends \PHPUnit_Framework_TestCase {
 
             try {
             	yield $service->verifyDns01Challenge("kevin-test.kf.porticor.net", $payload);
+                $this->fail("Didn't throw expected exception.");
             } catch (AcmeException $e) {
-            	$this->assertEquals($e->getMessage(), "selfVerify failed, please check DNS record under _acme-challenge.kevin-test.kf.porticor.net.");
+            	$this->assertEquals($e->getMessage(), "Verification failed, please check DNS record under '_acme-challenge.kevin-test.kf.porticor.net'.");
             } finally {
 				\Amp\stop();
 			}

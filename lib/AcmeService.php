@@ -13,6 +13,9 @@ use Amp\Artax\Client;
 use Amp\Artax\Cookie\NullCookieJar;
 use Amp\Artax\Response;
 use Amp\CoroutineResult;
+use Amp\Dns\NoRecordException;
+use Amp\Dns\Record;
+use Amp\Dns\ResolutionException;
 use Amp\Pause;
 use InvalidArgumentException;
 use Namshi\JOSE\Base64\Base64UrlSafeEncoder;
@@ -676,16 +679,22 @@ EOL;
         }
 
         $uri = "_acme-challenge." . $domain;
-        $dnsResponse = dns_get_record($uri);
 
-        /* Throw error if no DNS record is found */
-        if (!$dnsResponse) {
-            throw new AcmeException("selfVerify failed, no DNS record found for expected domain: _acme-challenge." . $domain);
+        try {
+            $dnsResponse = yield \Amp\Dns\query($uri, ["types" => Record::TXT]);
+        } catch (NoRecordException $e) {
+            throw new AcmeException("Verification failed, no TXT record found for '{$uri}'.", 0, $e);
+        } catch (ResolutionException $e) {
+            throw new AcmeException("Verification failed, couldn't query TXT record of '{$uri}'.", 0, $e);
         }
-        /* Throw error if no TXT record exists or if value of TXT record does not match expected payload */
-        if (!array_key_exists("txt", $dnsResponse[0]) or $dnsResponse[0]["txt"] !== $dnsPayload) {
-            throw new AcmeException("selfVerify failed, please check DNS record under {$uri}.");
+
+        list($record) = $dnsResponse;
+        list($payload) = $record;
+
+        if ($payload !== $dnsPayload) {
+            throw new AcmeException("Verification failed, please check DNS record under '{$uri}'.");
         }
+
         yield new CoroutineResult($dnsResponse);
         return;
     }
