@@ -681,7 +681,7 @@ EOL;
         $uri = "_acme-challenge." . $domain;
 
         try {
-            $dnsResponse = yield \Amp\Dns\query($uri, ["types" => Record::TXT]);
+            $dnsResponse = (yield \Amp\Dns\query($uri, ["types" => Record::TXT]));
         } catch (NoRecordException $e) {
             throw new AcmeException("Verification failed, no TXT record found for '{$uri}'.", 0, $e);
         } catch (ResolutionException $e) {
