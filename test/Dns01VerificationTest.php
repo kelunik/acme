@@ -16,7 +16,7 @@ class Dns01VerificationTest extends \PHPUnit_Framework_TestCase {
         \Amp\run(function() {
             $keyPair = (new OpenSSLKeyGenerator())->generate();
             $client = new AcmeClient("https://acme-staging.api.letsencrypt.org/directory", $keyPair);
-            $service = new AcmeService($client, $keyPair);
+            $service = new AcmeService($client);
 
             /** @var Response $payloadResponse */
             $payload = "foobar";
@@ -38,7 +38,7 @@ class Dns01VerificationTest extends \PHPUnit_Framework_TestCase {
     	\Amp\run(function() {
             $keyPair = (new OpenSSLKeyGenerator())->generate();
             $client = new AcmeClient("https://acme-staging.api.letsencrypt.org/directory", $keyPair);
-            $service = new AcmeService($client, $keyPair);
+            $service = new AcmeService($client);
 
             /** @var Response $payloadResponse */
             $payload = "foobar";

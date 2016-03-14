@@ -19,7 +19,7 @@ class Http01VerificationTest extends \PHPUnit_Framework_TestCase {
 
             $keyPair = (new OpenSSLKeyGenerator())->generate();
             $client = new AcmeClient("https://acme-staging.api.letsencrypt.org/directory", $keyPair);
-            $service = new AcmeService($client, $keyPair);
+            $service = new AcmeService($client);
 
             $token = "invalid-common-name";
 
@@ -49,7 +49,7 @@ class Http01VerificationTest extends \PHPUnit_Framework_TestCase {
         \Amp\run(function() {
             $keyPair = (new OpenSSLKeyGenerator())->generate();
             $client = new AcmeClient("https://acme-staging.api.letsencrypt.org/directory", $keyPair);
-            $service = new AcmeService($client, $keyPair);
+            $service = new AcmeService($client);
 
             $token = "abcdef";
 

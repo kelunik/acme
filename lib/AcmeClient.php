@@ -70,8 +70,19 @@ class AcmeClient {
 
         $this->dictionaryUri = $dictionaryUri;
         $this->keyPair = $keyPair;
-        $this->http = $http ?: new Client(new NullCookieJar);
+        $this->http = $http ?: $this->buildClient();
         $this->nonces = [];
+    }
+
+    /**
+     * Constructs a default HTTP client.
+     *
+     * @return Client
+     */
+    private function buildClient() {
+        $client = new Client(new NullCookieJar);
+        $client->setOption(Client::OP_DEFAULT_USER_AGENT, "kelunik/acme");
+        return $client;
     }
 
     /**
