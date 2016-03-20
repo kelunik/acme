@@ -685,7 +685,7 @@ EOL;
         } catch (NoRecordException $e) {
             throw new AcmeException("Verification failed, no TXT record found for '{$uri}'.", 0, $e);
         } catch (ResolutionException $e) {
-            throw new AcmeException("Verification failed, couldn't query TXT record of '{$uri}'.", 0, $e);
+            throw new AcmeException("Verification failed, couldn't query TXT record of '{$uri}': " . $e->getMessage(), 0, $e);
         }
 
         list($record) = $dnsResponse;

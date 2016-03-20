@@ -8,13 +8,14 @@ use Amp\Artax\Response;
 class Http01VerificationTest extends \PHPUnit_Framework_TestCase {
     public function setUp() {
         \Amp\reactor(\Amp\driver());
+        \Amp\Dns\resolver(\Amp\Dns\driver());
     }
 
     /**
      * @test
      */
     public function ignoresWrongPeerName() {
-        \Amp\run(function() {
+        \Amp\run(function () {
             $http = new Client();
 
             $keyPair = (new OpenSSLKeyGenerator())->generate();
@@ -34,19 +35,17 @@ class Http01VerificationTest extends \PHPUnit_Framework_TestCase {
                 $this->fail("Didn't ignore invalid common name. " . $e);
             } catch (\Exception $e) {
                 $this->fail("Didn't ignore invalid common name. " . $e);
+            } finally {
+                \Amp\stop();
             }
-
-            \Amp\stop();
         });
     }
 
     /**
      * @test
-     * @expectedException \Kelunik\Acme\AcmeException
-     * @expectedExceptionMessage selfVerify failed
      */
     public function failsOnWrongPayload() {
-        \Amp\run(function() {
+        \Amp\run(function () {
             $keyPair = (new OpenSSLKeyGenerator())->generate();
             $client = new AcmeClient("https://acme-staging.api.letsencrypt.org/directory", $keyPair);
             $service = new AcmeService($client);
@@ -56,9 +55,14 @@ class Http01VerificationTest extends \PHPUnit_Framework_TestCase {
             /** @var Response $payloadResponse */
             $payload = "foobar";
 
-            yield $service->verifyHttp01Challenge("kelunik.com", $token, $payload);
-
-            \Amp\stop();
+            try {
+                yield $service->verifyHttp01Challenge("kelunik.com", $token, $payload);
+                $this->assertTrue(true);
+            } catch (AcmeException $e) {
+                $this->assertContains("selfVerify failed", $e->getMessage());
+            } finally {
+                \Amp\stop();
+            }
         });
     }
 }
