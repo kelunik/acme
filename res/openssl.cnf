@@ -1,0 +1,6 @@
+# minimalist openssl.cnf file
+
+HOME     = .
+RANDFILE = $ENV::HOME/.rnd
+
+[ v3_ca ]

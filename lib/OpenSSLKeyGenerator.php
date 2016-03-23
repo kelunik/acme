@@ -35,15 +35,21 @@ class OpenSSLKeyGenerator implements KeyGenerator {
         $res = openssl_pkey_new([
             "private_key_type" => OPENSSL_KEYTYPE_RSA,
             "private_key_bits" => $bits,
+            "config" => __DIR__ . "/../res/openssl.cnf"
         ]);
 
-        $success = openssl_pkey_export($res, $privateKey);
+        $success = openssl_pkey_export($res, $privateKey, null, [
+            "config" => __DIR__ . "/../res/openssl.cnf"
+        ]);
 
         if (!$success) {
             throw new \RuntimeException("Key export failed!");
         }
 
         $publicKey = openssl_pkey_get_details($res)["key"];
+
+        // clear error buffer, because of minimalistic openssl.cnf
+        while (openssl_error_string() !== false);
 
         return new KeyPair($privateKey, $publicKey);
     }
