@@ -8,6 +8,7 @@
  */
 
 namespace Kelunik\Acme;
+
 use Phar;
 
 /**
@@ -52,10 +53,17 @@ class OpenSSLKeyGenerator implements KeyGenerator {
         ]);
 
         if (!$success) {
+            openssl_pkey_free($res);
             throw new \RuntimeException("Key export failed!");
         }
 
+        if (class_exists("Phar") && !empty(Phar::running(true)) && file_exists($configFile)) {
+            unlink($configFile);
+        }
+
         $publicKey = openssl_pkey_get_details($res)["key"];
+
+        openssl_pkey_free($res);
 
         // clear error buffer, because of minimalistic openssl.cnf
         while (openssl_error_string() !== false);
