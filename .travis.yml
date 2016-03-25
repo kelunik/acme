@@ -8,14 +8,14 @@ php:
 
 cache:
   directories:
-    - vendor
+    - $HOME/.composer/cache/files
 
 install:
   - phpenv config-rm xdebug.ini
   - composer self-update
   - if [[ ${TRAVIS_PHP_VERSION:0:3} == "5.5" ]]; then composer require --dev --no-update phpunit/phpunit ^4; fi
   - composer require satooshi/php-coveralls dev-master --dev --no-update
-  - composer update --ignore-platform-reqs
+  - composer install --ignore-platform-reqs
   - composer show --installed
 
 script:
