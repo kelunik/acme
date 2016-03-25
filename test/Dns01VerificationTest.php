@@ -5,6 +5,7 @@ namespace Kelunik\Acme;
 use Amp\Artax\Response;
 use Amp\Dns\NoRecordException;
 use Amp\Dns\Record;
+use Amp\Dns\ResolutionException;
 use Amp\Dns\Resolver;
 use Amp\Failure;
 use Amp\Success;
@@ -38,6 +39,16 @@ class Dns01VerificationTest extends \PHPUnit_Framework_TestCase {
      */
     public function failsOnDnsNotFound() {
         $this->resolver->method("query")->willReturn(new Failure(new NoRecordException));
+        \Amp\wait($this->acme->verifyDns01Challenge("example.com", "foobar"));
+    }
+
+    /**
+     * @test
+     * @expectedException \Kelunik\Acme\AcmeException
+     * @expectedExceptionMessage Verification failed, couldn't query TXT record of '_acme-challenge.example.com'
+     */
+    public function failsOnGeneralDnsIssue() {
+        $this->resolver->method("query")->willReturn(new Failure(new ResolutionException));
         \Amp\wait($this->acme->verifyDns01Challenge("example.com", "foobar"));
     }
 
