@@ -41,9 +41,9 @@ class AcmeClient {
     private $keyPair;
 
     /**
-     * @var string dictionary URI of the ACME server
+     * @var string directory URI of the ACME server
      */
-    private $dictionaryUri;
+    private $directoryUri;
 
     /**
      * @var array dictionary contents of the ACME server
@@ -59,16 +59,16 @@ class AcmeClient {
      * AcmeClient constructor.
      *
      * @api
-     * @param string      $dictionaryUri URI to the ACME server directory
+     * @param string      $directoryUri URI to the ACME server directory
      * @param KeyPair     $keyPair account key pair
      * @param Client|null $http custom HTTP client, default client will be used if no value is provided
      */
-    public function __construct($dictionaryUri, KeyPair $keyPair, Client $http = null) {
-        if (!is_string($dictionaryUri)) {
-            throw new InvalidArgumentException(sprintf("\$dictionaryUri must be of type string, %s given.", gettype($dictionaryUri)));
+    public function __construct($directoryUri, KeyPair $keyPair, Client $http = null) {
+        if (!is_string($directoryUri)) {
+            throw new InvalidArgumentException(sprintf("\$directoryUri must be of type string, %s given.", gettype($directoryUri)));
         }
 
-        $this->dictionaryUri = $dictionaryUri;
+        $this->directoryUri = $directoryUri;
         $this->keyPair = $keyPair;
         $this->http = $http ?: $this->buildClient();
         $this->nonces = [];
@@ -150,7 +150,7 @@ class AcmeClient {
         }
 
         if (!$this->dictionary) {
-            return \Amp\pipe(\Amp\resolve($this->fetchDictionary()), function () use ($resource) {
+            return \Amp\pipe(\Amp\resolve($this->fetchDirectory()), function () use ($resource) {
                 return $this->getResourceUri($resource);
             });
         }
@@ -168,10 +168,10 @@ class AcmeClient {
      * @return \Generator coroutine resolved by Amp.
      * @throws AcmeException If the directory could not be fetched or was invalid.
      */
-    private function fetchDictionary() {
+    private function fetchDirectory() {
         try {
             /** @var Response $response */
-            $response = (yield $this->http->request($this->dictionaryUri));
+            $response = (yield $this->http->request($this->directoryUri));
 
             if ($response->getStatus() !== 200) {
                 $info = json_decode($response->getBody());
