@@ -8,7 +8,6 @@ use Amp\Dns\Record;
 use Amp\Dns\Resolver;
 use Amp\Failure;
 use Amp\Success;
-use RuntimeException;
 
 class Dns01VerificationTest extends \PHPUnit_Framework_TestCase {
     public function setUp() {
@@ -20,7 +19,9 @@ class Dns01VerificationTest extends \PHPUnit_Framework_TestCase {
      * @test
      */
     public function failsOnDnsNotFound() {
-        \Amp\Dns\resolver(new NotFoundResolver);
+        $stub = $this->getMockBuilder(Resolver::class)->getMock();
+        $stub->method("query")->willReturn(new Failure(new NoRecordException));
+        \Amp\Dns\resolver($stub);
 
         \Amp\run(function () {
             $keyPair = (new OpenSSLKeyGenerator())->generate();
@@ -44,7 +45,9 @@ class Dns01VerificationTest extends \PHPUnit_Framework_TestCase {
      * @test
      */
     public function failsOnWrongPayload() {
-        \Amp\Dns\resolver(new TxtResolver("xyz"));
+        $stub = $this->getMockBuilder(Resolver::class)->getMock();
+        $stub->method("query")->willReturn(new Success(["xyz", Record::TXT, 300]));
+        \Amp\Dns\resolver($stub);
 
         \Amp\run(function () {
             $keyPair = (new OpenSSLKeyGenerator())->generate();
@@ -69,7 +72,9 @@ class Dns01VerificationTest extends \PHPUnit_Framework_TestCase {
      * @test
      */
     public function succeedsOnRightPayload() {
-        \Amp\Dns\resolver(new TxtResolver("foobar"));
+        $stub = $this->getMockBuilder(Resolver::class)->getMock();
+        $stub->method("query")->willReturn(new Success(["foobar", Record::TXT, 300]));
+        \Amp\Dns\resolver($stub);
 
         \Amp\run(function () {
             $keyPair = (new OpenSSLKeyGenerator())->generate();
@@ -90,31 +95,5 @@ class Dns01VerificationTest extends \PHPUnit_Framework_TestCase {
                 \Amp\stop();
             }
         });
-    }
-}
-
-class NotFoundResolver implements Resolver {
-    public function resolve($name, array $options = []) {
-        throw new RuntimeException("Not Implemented!");
-    }
-
-    public function query($name, $type, array $options = []) {
-        return new Failure(new NoRecordException());
-    }
-}
-
-class TxtResolver implements Resolver {
-    private $payload;
-
-    public function __construct($payload) {
-        $this->payload = $payload;
-    }
-
-    public function resolve($name, array $options = []) {
-        throw new RuntimeException("Not Implemented!");
-    }
-
-    public function query($name, $type, array $options = []) {
-        return new Success([$this->payload, Record::TXT, 300]);
     }
 }
