@@ -48,7 +48,7 @@ class AcmeClient {
     /**
      * @var array dictionary contents of the ACME server
      */
-    private $dictionary;
+    private $directory;
 
     /**
      * @var array saved nonces for use in future requests
@@ -145,18 +145,19 @@ class AcmeClient {
             throw new InvalidArgumentException(sprintf("\$resource must be of type string, %s given.", gettype($resource)));
         }
 
-        if (substr($resource, 0, 8) === "https://") {
+        // ACME MUST be served over HTTPS, but we use HTTP for testing …
+        if (substr($resource, 0, 7) === "http://" || substr($resource, 0, 8) === "https://") {
             return new Success($resource);
         }
 
-        if (!$this->dictionary) {
+        if (!$this->directory) {
             return \Amp\pipe(\Amp\resolve($this->fetchDirectory()), function () use ($resource) {
                 return $this->getResourceUri($resource);
             });
         }
 
-        if (isset($this->dictionary[$resource])) {
-            return new Success($this->dictionary[$resource]);
+        if (isset($this->directory[$resource])) {
+            return new Success($this->directory[$resource]);
         }
 
         return new Failure(new AcmeException("Resource not found in directory: '{$resource}'."));
@@ -183,7 +184,13 @@ class AcmeClient {
                 throw new AcmeException("Invalid directory response. HTTP response code: " . $response->getStatus());
             }
 
-            $this->dictionary = json_decode($response->getBody(), true) ?: [];
+            $directory = json_decode($response->getBody(), true);
+
+            if (empty($directory)) {
+                throw new AcmeException("Invalid directory: empty!");
+            }
+
+            $this->directory = $directory;
             $this->saveNonce($response);
         } catch (Exception $e) {
             throw new AcmeException("Could not obtain directory.", null, $e);
