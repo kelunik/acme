@@ -692,7 +692,7 @@ EOL;
         list($payload) = $record;
 
         if ($payload !== $dnsPayload) {
-            throw new AcmeException("Verification failed, please check DNS record under '{$uri}'.");
+            throw new AcmeException("Verification failed, please check DNS record under '{$uri}'. Expected: '{$dnsPayload}', Got: '{$payload}'.");
         }
 
         yield new CoroutineResult($dnsResponse);
