@@ -557,7 +557,7 @@ EOL;
     public function verifyHttp01Challenge($domain, $token, $keyAuthorization) {
         trigger_error("verifyHttp01Challenge is deprecated and will be removed in 0.4.0, use Http01Verifier::verifyChallenge", E_USER_DEPRECATED);
 
-        return (new Http01Verifier)->verifyChallenge($domain, $token, $keyAuthorization);
+        return (new Verifiers\Http01)->verifyChallenge($domain, $token, $keyAuthorization);
     }
 
     /**
@@ -574,7 +574,7 @@ EOL;
     public function verifyDns01Challenge($domain, $keyAuthorization) {
         trigger_error("verifyDns01Challenge is deprecated and will be removed in 0.4.0, use Dns01Verifier::verifyChallenge", E_USER_DEPRECATED);
 
-        return (new Dns01Verifier)->verifyChallenge($domain, $keyAuthorization);
+        return (new Verifiers\Dns01)->verifyChallenge($domain, $keyAuthorization);
     }
 
     /**

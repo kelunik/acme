@@ -17,7 +17,7 @@ class Dns01VerificationTest extends \PHPUnit_Framework_TestCase {
     private $resolver;
 
     /**
-     * @var Dns01Verifier
+     * @var Verifiers\Dns01
      */
     private $verifier;
 
@@ -25,7 +25,7 @@ class Dns01VerificationTest extends \PHPUnit_Framework_TestCase {
         \Amp\reactor(\Amp\driver());
 
         $this->resolver = $this->getMockBuilder(Resolver::class)->getMock();
-        $this->verifier = new Dns01Verifier($this->resolver);
+        $this->verifier = new Verifiers\Dns01($this->resolver);
     }
 
     /**

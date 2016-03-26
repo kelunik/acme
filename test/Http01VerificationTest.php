@@ -7,7 +7,7 @@ use Amp\Artax\Response;
 
 class Http01VerificationTest extends \PHPUnit_Framework_TestCase {
     /**
-     * @var Http01Verifier
+     * @var Verifiers\Http01
      */
     private $verifier;
 
@@ -15,7 +15,7 @@ class Http01VerificationTest extends \PHPUnit_Framework_TestCase {
         \Amp\reactor(\Amp\driver());
         \Amp\Dns\resolver(\Amp\Dns\driver());
 
-        $this->verifier = new Http01Verifier();
+        $this->verifier = new Verifiers\Http01();
     }
 
     /**
