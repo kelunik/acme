@@ -7,17 +7,15 @@ use Amp\Artax\Response;
 
 class Http01VerificationTest extends \PHPUnit_Framework_TestCase {
     /**
-     * @var AcmeService
+     * @var Verifiers\Http01
      */
-    private $acme;
+    private $verifier;
 
     public function setUp() {
         \Amp\reactor(\Amp\driver());
         \Amp\Dns\resolver(\Amp\Dns\driver());
 
-        $keyPair = (new OpenSSLKeyGenerator())->generate();
-        $client = new AcmeClient("https://acme-staging.api.letsencrypt.org/directory", $keyPair);
-        $this->acme = new AcmeService($client);
+        $this->verifier = new Verifiers\Http01();
     }
 
     /**
@@ -28,7 +26,7 @@ class Http01VerificationTest extends \PHPUnit_Framework_TestCase {
         $payloadResponse = \Amp\wait((new Client)->request("http://blog.kelunik.com/robots.txt"));
         $payload = trim($payloadResponse->getBody());
 
-        \Amp\wait($this->acme->verifyHttp01Challenge("kelunik.com", "invalid-common-name", $payload));
+        \Amp\wait($this->verifier->verifyChallenge("kelunik.com", "invalid-common-name", $payload));
     }
 
     /**
@@ -37,7 +35,7 @@ class Http01VerificationTest extends \PHPUnit_Framework_TestCase {
      * @expectedExceptionMessage selfVerify failed
      */
     public function failsOnWrongPayload() {
-        \Amp\wait($this->acme->verifyHttp01Challenge("kelunik.com", "abcdef", "foobar"));
+        \Amp\wait($this->verifier->verifyChallenge("kelunik.com", "abcdef", "foobar"));
     }
 
     /**
@@ -46,7 +44,7 @@ class Http01VerificationTest extends \PHPUnit_Framework_TestCase {
      * @expectedExceptionMessage domain must be of type string
      */
     public function failsIfDomainNotString() {
-        \Amp\wait($this->acme->verifyHttp01Challenge(null, "abcdef", "foobar"));
+        \Amp\wait($this->verifier->verifyChallenge(null, "abcdef", "foobar"));
     }
 
     /**
@@ -55,7 +53,7 @@ class Http01VerificationTest extends \PHPUnit_Framework_TestCase {
      * @expectedExceptionMessage token must be of type string
      */
     public function failsIfTokenNotString() {
-        \Amp\wait($this->acme->verifyHttp01Challenge("kelunik.com", null, "foobar"));
+        \Amp\wait($this->verifier->verifyChallenge("kelunik.com", null, "foobar"));
     }
 
     /**
@@ -64,6 +62,6 @@ class Http01VerificationTest extends \PHPUnit_Framework_TestCase {
      * @expectedExceptionMessage payload must be of type string
      */
     public function failsIfPayloadNotString() {
-        \Amp\wait($this->acme->verifyHttp01Challenge("kelunik.com", "abcdef", null));
+        \Amp\wait($this->verifier->verifyChallenge("kelunik.com", "abcdef", null));
     }
 }

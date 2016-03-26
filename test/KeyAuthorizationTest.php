@@ -2,7 +2,7 @@
 
 namespace Kelunik\Acme;
 
-class Http01GenerationTest extends \PHPUnit_Framework_TestCase {
+class KeyAuthorizationTest extends \PHPUnit_Framework_TestCase {
     /**
      * @var AcmeService
      */
@@ -24,7 +24,7 @@ class Http01GenerationTest extends \PHPUnit_Framework_TestCase {
      */
     public function failsIfTokenNotString() {
         $keyPair = (new OpenSSLKeyGenerator)->generate();
-        $this->acme->generateHttp01Payload($keyPair, null);
+        $this->acme->generateKeyAuthorization($keyPair, null);
     }
 
     /**
@@ -34,7 +34,7 @@ class Http01GenerationTest extends \PHPUnit_Framework_TestCase {
      */
     public function failsWithInvalidKey() {
         $keyPair = new KeyPair("abc", "def");
-        $this->acme->generateHttp01Payload($keyPair, "foobar");
+        $this->acme->generateKeyAuthorization($keyPair, "foobar");
     }
 
     /**
@@ -43,7 +43,7 @@ class Http01GenerationTest extends \PHPUnit_Framework_TestCase {
     public function containsTokenOnSuccess() {
         $token = "some-random-token";
         $keyPair = (new OpenSSLKeyGenerator)->generate();
-        $payload = $this->acme->generateHttp01Payload($keyPair, $token);
+        $payload = $this->acme->generateKeyAuthorization($keyPair, $token);
         $this->assertStringStartsWith($token . ".", $payload);
     }
 }

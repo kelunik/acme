@@ -17,19 +17,15 @@ class Dns01VerificationTest extends \PHPUnit_Framework_TestCase {
     private $resolver;
 
     /**
-     * @var \Kelunik\Acme\AcmeService
+     * @var Verifiers\Dns01
      */
-    private $acme;
+    private $verifier;
 
     public function setUp() {
         \Amp\reactor(\Amp\driver());
 
         $this->resolver = $this->getMockBuilder(Resolver::class)->getMock();
-        \Amp\Dns\resolver($this->resolver);
-
-        $keyPair = (new OpenSSLKeyGenerator())->generate();
-        $client = new AcmeClient("https://acme-staging.api.letsencrypt.org/directory", $keyPair);
-        $this->acme = new AcmeService($client);
+        $this->verifier = new Verifiers\Dns01($this->resolver);
     }
 
     /**
@@ -39,7 +35,7 @@ class Dns01VerificationTest extends \PHPUnit_Framework_TestCase {
      */
     public function failsOnDnsNotFound() {
         $this->resolver->method("query")->willReturn(new Failure(new NoRecordException));
-        \Amp\wait($this->acme->verifyDns01Challenge("example.com", "foobar"));
+        \Amp\wait($this->verifier->verifyChallenge("example.com", "foobar"));
     }
 
     /**
@@ -49,7 +45,7 @@ class Dns01VerificationTest extends \PHPUnit_Framework_TestCase {
      */
     public function failsOnGeneralDnsIssue() {
         $this->resolver->method("query")->willReturn(new Failure(new ResolutionException));
-        \Amp\wait($this->acme->verifyDns01Challenge("example.com", "foobar"));
+        \Amp\wait($this->verifier->verifyChallenge("example.com", "foobar"));
     }
 
     /**
@@ -59,7 +55,7 @@ class Dns01VerificationTest extends \PHPUnit_Framework_TestCase {
      */
     public function failsOnWrongPayload() {
         $this->resolver->method("query")->willReturn(new Success([["xyz", Record::TXT, 300]]));
-        \Amp\wait($this->acme->verifyDns01Challenge("example.com", "foobar"));
+        \Amp\wait($this->verifier->verifyChallenge("example.com", "foobar"));
     }
 
     /**
@@ -67,7 +63,7 @@ class Dns01VerificationTest extends \PHPUnit_Framework_TestCase {
      */
     public function succeedsOnRightPayload() {
         $this->resolver->method("query")->willReturn(new Success([["foobar", Record::TXT, 300]]));
-        \Amp\wait($this->acme->verifyDns01Challenge("example.com", "foobar"));
+        \Amp\wait($this->verifier->verifyChallenge("example.com", "foobar"));
     }
 
     /**
@@ -75,7 +71,7 @@ class Dns01VerificationTest extends \PHPUnit_Framework_TestCase {
      * @expectedException \InvalidArgumentException
      */
     public function failsWithDomainNotString() {
-        \Amp\wait($this->acme->verifyDns01Challenge(null, ""));
+        \Amp\wait($this->verifier->verifyChallenge(null, ""));
     }
 
     /**
@@ -83,6 +79,6 @@ class Dns01VerificationTest extends \PHPUnit_Framework_TestCase {
      * @expectedException \InvalidArgumentException
      */
     public function failsWithPayloadNotString() {
-        \Amp\wait($this->acme->verifyDns01Challenge("example.com", null));
+        \Amp\wait($this->verifier->verifyChallenge("example.com", null));
     }
 }
