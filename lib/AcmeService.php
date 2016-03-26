@@ -360,9 +360,6 @@ EOL;
 
         $csr = openssl_csr_new([
             "CN" => reset($domains),
-            "ST" => "Germany",
-            "C" => "DE",
-            "O" => "Unknown",
         ], $privateKey, [
             "digest_alg" => "sha256",
             "req_extensions" => "v3_req",
