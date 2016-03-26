@@ -1,7 +1,4 @@
-# acme
-
-![Unstable](https://img.shields.io/badge/api-unstable-orange.svg?style=flat-square)
-![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)
+# acme ![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)
 
 `kelunik/acme` is a non-blocking implementation of the [ACME](https://github.com/ietf-wg-acme/acme) protocol based on the [`amp`](https://github.com/amphp/amp) concurrency framework.
 
@@ -16,6 +13,8 @@
 ```bash
 composer require kelunik/acme
 ```
+
+This package follows semantic versioning. Although there's no `v1.0.0` yet, it's safe to use it as a dependency, because breaking changes won't be installed when using it as `^0.3`.
 
 **[Documentation](http://blog.kelunik.com/docs/acme/)**
 
