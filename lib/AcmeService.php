@@ -9,13 +9,8 @@
 
 namespace Kelunik\Acme;
 
-use Amp\Artax\Client;
-use Amp\Artax\Cookie\NullCookieJar;
 use Amp\Artax\Response;
 use Amp\CoroutineResult;
-use Amp\Dns\NoRecordException;
-use Amp\Dns\Record;
-use Amp\Dns\ResolutionException;
 use Amp\Pause;
 use InvalidArgumentException;
 use Namshi\JOSE\Base64\Base64UrlSafeEncoder;
@@ -551,15 +546,68 @@ EOL;
     }
 
     /**
-     * Generates the payload which must be provided in HTTP-01 challenges.
+     * Verifies a HTTP-01 challenge.
+     *
+     * Can be used to verify a challenge before requesting validation from a CA to catch errors early.
+     *
+     * @api
+     * @param string $domain domain to verify
+     * @param string $token challenge token
+     * @param string $keyAuthorization key authorization (expected payload)
+     * @return \Amp\Promise resolves to null
+     * @throws AcmeException If the challenge could not be verified.
+     */
+    public function verifyHttp01Challenge($domain, $token, $keyAuthorization) {
+        trigger_error("verifyHttp01Challenge is deprecated and will be removed in 0.4.0, use Http01Verifier::verifyChallenge", E_USER_DEPRECATED);
+
+        return (new Http01Verifier)->verifyChallenge($domain, $token, $keyAuthorization);
+    }
+
+    /**
+     * Verifies a DNS-01 Challenge.
+     *
+     * Can be used to verify a challenge before requesting validation from a CA to catch errors early.
+     *
+     * @api
+     * @param string $domain domain to verify
+     * @param string $keyAuthorization key authorization (expected payload)
+     * @return \Amp\Promise resolves to the DNS entry found
+     * @throws AcmeException If the challenge could not be verified.
+     */
+    public function verifyDns01Challenge($domain, $keyAuthorization) {
+        trigger_error("verifyDns01Challenge is deprecated and will be removed in 0.4.0, use Dns01Verifier::verifyChallenge", E_USER_DEPRECATED);
+
+        return (new Dns01Verifier)->verifyChallenge($domain, $keyAuthorization);
+    }
+
+    /**
+     * Generates the payload which must be provided in challenges, e.g. HTTP-01 and DNS-01.
      *
      * @api
      * @param KeyPair $accountKeyPair account key pair
      * @param string  $token challenge token
      * @return string payload to be provided at /.well-known/acme-challenge/$token
      * @throws AcmeException If something went wrong.
+     * @see https://github.com/ietf-wg-acme/acme/blob/master/draft-ietf-acme-acme.md#key-authorizations
+     * @deprecated Deprecated in favor of generateKeyAuthorization since 0.3.4, will be removed in 0.4.0
      */
     public function generateHttp01Payload(KeyPair $accountKeyPair, $token) {
+        trigger_error("generateHttp01Payload is deprecated in favor or generateKeyAuthorization and will be removed in 0.4.0", E_USER_DEPRECATED);
+
+        return $this->generateKeyAuthorization($accountKeyPair, $token);
+    }
+
+    /**
+     * Generates the payload which must be provided in challenges, e.g. HTTP-01 and DNS-01.
+     *
+     * @api
+     * @param KeyPair $accountKeyPair account key pair
+     * @param string  $token challenge token
+     * @return string payload to be provided at /.well-known/acme-challenge/$token for HTTP-01 and _acme-challenge.example.com for DNS-01
+     * @throws AcmeException If something went wrong.
+     * @see https://github.com/ietf-wg-acme/acme/blob/master/draft-ietf-acme-acme.md#key-authorizations
+     */
+    public function generateKeyAuthorization(KeyPair $accountKeyPair, $token) {
         if (!is_string($token)) {
             throw new InvalidArgumentException(sprintf("\$token must be of type string, %s given.", gettype($token)));
         }
@@ -585,118 +633,6 @@ EOL;
         ];
 
         return $token . "." . $enc->encode(hash("sha256", json_encode($payload), true));
-    }
-
-    /**
-     * Verifies a HTTP-01 challenge.
-     *
-     * Can be used to verify a challenge before requesting validation from a CA to catch errors early.
-     *
-     * @api
-     * @param string $domain domain to verify
-     * @param string $token challenge token
-     * @param string $payload expected payload
-     * @return \Amp\Promise resolves to null
-     * @throws AcmeException If the challenge could not be verified.
-     */
-    public function verifyHttp01Challenge($domain, $token, $payload) {
-        return \Amp\resolve($this->doVerifyHttp01Challenge($domain, $token, $payload));
-    }
-
-    /**
-     * Verifies a HTTP-01 challenge.
-     *
-     * Can be used to verify a challenge before requesting validation from a CA to catch errors early.
-     *
-     * @param string $domain domain to verify
-     * @param string $token challenge token
-     * @param string $payload expected payload
-     * @return \Generator coroutine resolved by Amp returning null
-     * @throws AcmeException If the challenge could not be verified.
-     */
-    private function doVerifyHttp01Challenge($domain, $token, $payload) {
-        if (!is_string($domain)) {
-            throw new InvalidArgumentException(sprintf("\$domain must be of type string, %s given.", gettype($domain)));
-        }
-
-        if (!is_string($token)) {
-            throw new InvalidArgumentException(sprintf("\$token must be of type string, %s given.", gettype($token)));
-        }
-
-        if (!is_string($payload)) {
-            throw new InvalidArgumentException(sprintf("\$payload must be of type string, %s given.", gettype($payload)));
-        }
-
-        $uri = "http://{$domain}/.well-known/acme-challenge/{$token}";
-
-        $client = new Client(new NullCookieJar);
-
-        /** @var Response $response */
-        $response = (yield $client->request($uri, [
-            Client::OP_CRYPTO => [
-                "verify_peer" => false,
-                "verify_peer_name" => false,
-            ],
-        ]));
-
-        if (rtrim($payload) !== rtrim($response->getBody())) {
-            throw new AcmeException("selfVerify failed, please check {$uri}.");
-        }
-    }
-
-    /**
-     * Verifies a DNS-01 Challenge.
-     *
-     * Can be used to verify a challenge before requesting validation from a CA to catch errors early.
-     *
-     * @api
-     * @param string $domain domain to verify
-     * @param string $dnsPayload expected payload
-     * @return \Amp\Promise resolves to the DNS entry found
-     * @throws AcmeException If the challenge could not be verified.
-     */
-    public function verifyDns01Challenge($domain, $dnsPayload) {
-        return \Amp\resolve($this->doVerifyDns01Challenge($domain, $dnsPayload));
-    }
-
-    /**
-     * Verifies a DNS-01 Challenge.
-     *
-     * Can be used to verify a challenge before requesting validation from a CA to catch errors early.
-     *
-     * @param string $domain domain to verify
-     * @param string $dnsPayload expected payload
-     * @return \Generator coroutine resolved to the DNS entry found
-     * @throws AcmeException If the challenge could not be verified.
-     */
-    private function doVerifyDns01Challenge($domain, $dnsPayload) {
-        if (!is_string($domain)) {
-            throw new InvalidArgumentException(sprintf("\$domain must be of type string, %s given.", gettype($domain)));
-        }
-
-        if (!is_string($dnsPayload)) {
-            throw new InvalidArgumentException(sprintf("\$dnsPayload must be of type string, %s given.", gettype($dnsPayload)));
-        }
-
-        $uri = "_acme-challenge." . $domain;
-
-        try {
-            $dnsResponse = (yield \Amp\Dns\query($uri, ["types" => Record::TXT]));
-        } catch (NoRecordException $e) {
-            throw new AcmeException("Verification failed, no TXT record found for '{$uri}'.", 0, $e);
-        } catch (ResolutionException $e) {
-            throw new AcmeException("Verification failed, couldn't query TXT record of '{$uri}': " . $e->getMessage(), 0, $e);
-        }
-
-        list($record) = $dnsResponse;
-        list($payload) = $record;
-
-        if ($payload !== $dnsPayload) {
-            throw new AcmeException("Verification failed, please check DNS record under '{$uri}'. Expected: '{$dnsPayload}', Got: '{$payload}'.");
-        }
-
-        yield new CoroutineResult($dnsResponse);
-        return;
     }
 
     /**
