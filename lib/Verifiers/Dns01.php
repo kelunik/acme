@@ -7,7 +7,7 @@
  * @license MIT
  */
 
-namespace Kelunik\Acme;
+namespace Kelunik\Acme\Verifiers;
 
 use Amp\CoroutineResult;
 use Amp\Dns\NoRecordException;
@@ -15,13 +15,14 @@ use Amp\Dns\Record;
 use Amp\Dns\ResolutionException;
 use Amp\Dns\Resolver;
 use InvalidArgumentException;
+use Kelunik\Acme\AcmeException;
 
 /**
  * Verifies DNS-01 challenges.
  *
  * @package Kelunik\Acme
  */
-class Dns01Verifier {
+class Dns01 {
     /** @var Resolver */
     private $resolver;
 

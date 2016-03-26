@@ -7,19 +7,20 @@
  * @license MIT
  */
 
-namespace Kelunik\Acme;
+namespace Kelunik\Acme\Verifiers;
 
 use Amp\Artax\Client;
 use Amp\Artax\Cookie\NullCookieJar;
 use Amp\Artax\Response;
 use InvalidArgumentException;
+use Kelunik\Acme\AcmeException;
 
 /**
  * Verifies HTTP-01 challenges.
  *
  * @package Kelunik\Acme
  */
-class Http01Verifier {
+class Http01 {
     private $client;
 
     public function __construct(Client $client = null) {
