@@ -27,7 +27,10 @@
     "autoload": {
         "psr-4": {
             "Kelunik\\Acme\\": "lib"
-        }
+        },
+        "files": [
+            "lib/functions.php"
+        ]
     },
     "extra": {
         "branch-alias": {
