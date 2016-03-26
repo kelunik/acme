@@ -67,4 +67,36 @@ class AcmeClientTest extends \PHPUnit_Framework_TestCase {
         $this->assertArrayHasKey("new-reg", $data);
         $this->assertArrayHasKey("revoke-cert", $data);
     }
+
+    /**
+     * @test
+     */
+    public function fetchesNonceWhenNoneAvailable() {
+        $client = new AcmeClient("http://127.0.0.1:4000/directory", (new OpenSSLKeyGenerator())->generate());
+
+        \Amp\wait($client->post("http://127.0.0.1:4000/acme/new-reg", []));
+    }
+
+    /**
+     * @test
+     * @expectedException \Kelunik\Acme\AcmeException
+     * @expectedExceptionMessage HTTP response didn't carry replay-nonce header.
+     */
+    public function failsWithWithoutNonce() {
+        $client = new AcmeClient("http://127.0.0.1:4000/directory", (new OpenSSLKeyGenerator())->generate());
+
+        \Amp\wait($client->post("https://github.com/", []));
+    }
+
+    /**
+     * @test
+     * @expectedException \Kelunik\Acme\AcmeException
+     * @expectedExceptionMessage could not obtain a replay nonce
+     */
+    public function failsIfHostNotAvailable() {
+        $client = new AcmeClient("http://127.0.0.1:4000/directory", (new OpenSSLKeyGenerator())->generate());
+
+        // mute because of stream_socket_enable_crypto(): SSL: Connection refused warning
+        @\Amp\wait($client->post("https://127.0.0.1:444/", []));
+    }
 }

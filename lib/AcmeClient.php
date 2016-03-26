@@ -123,10 +123,10 @@ class AcmeClient {
             } else {
                 if (!$response->hasHeader("replay-nonce")) {
                     $deferred->fail(new AcmeException("HTTP response didn't carry replay-nonce header."));
+                } else {
+                    list($nonce) = $response->getHeader("replay-nonce");
+                    $deferred->succeed($nonce);
                 }
-
-                list($nonce) = $response->getHeader("replay-nonce");
-                $deferred->succeed($nonce);
             }
         });
 
