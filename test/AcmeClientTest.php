@@ -2,6 +2,8 @@
 
 namespace Kelunik\Acme;
 
+use Amp\Artax\Response;
+
 class AcmeClientTest extends \PHPUnit_Framework_TestCase {
     protected function setUp() {
         \Amp\reactor(\Amp\driver());
@@ -35,5 +37,34 @@ class AcmeClientTest extends \PHPUnit_Framework_TestCase {
     public function failsIfPostResourceIsEmpty() {
         $client = new AcmeClient("http://127.0.0.1:4000/directory", (new OpenSSLKeyGenerator())->generate());
         \Amp\wait($client->post(null, []));
+    }
+
+    /**
+     * @test
+     * @expectedException \Kelunik\Acme\AcmeException
+     * @expectedExceptionMessage Resource not found in directory
+     */
+    public function failsIfResourceIsNoUriAndNotInDirectory() {
+        $client = new AcmeClient("http://127.0.0.1:4000/directory", (new OpenSSLKeyGenerator())->generate());
+        \Amp\wait($client->post("foobar", []));
+    }
+
+    /**
+     * @test
+     */
+    public function canFetchDirectory() {
+        $client = new AcmeClient("http://127.0.0.1:4000/directory", (new OpenSSLKeyGenerator())->generate());
+
+        /** @var Response $response */
+        $response = \Amp\wait($client->get("http://127.0.0.1:4000/directory"));
+        $this->assertSame(200, $response->getStatus());
+
+        $data = json_decode($response->getBody(), true);
+
+        $this->assertInternalType("array", $data);
+        $this->assertArrayHasKey("new-authz", $data);
+        $this->assertArrayHasKey("new-cert", $data);
+        $this->assertArrayHasKey("new-reg", $data);
+        $this->assertArrayHasKey("revoke-cert", $data);
     }
 }
