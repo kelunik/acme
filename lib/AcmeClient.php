@@ -11,6 +11,7 @@ namespace Kelunik\Acme;
 
 use Amp\Artax\Client;
 use Amp\Artax\Cookie\NullCookieJar;
+use Amp\Artax\HttpClient;
 use Amp\Artax\Request;
 use Amp\Artax\Response;
 use Amp\CoroutineResult;
@@ -31,7 +32,7 @@ use Throwable;
  */
 class AcmeClient {
     /**
-     * @var Client HTTP client
+     * @var HttpClient HTTP client
      */
     private $http;
 
@@ -61,9 +62,9 @@ class AcmeClient {
      * @api
      * @param string      $directoryUri URI to the ACME server directory
      * @param KeyPair     $keyPair account key pair
-     * @param Client|null $http custom HTTP client, default client will be used if no value is provided
+     * @param HttpClient|null $http custom HTTP client, default client will be used if no value is provided
      */
-    public function __construct($directoryUri, KeyPair $keyPair, Client $http = null) {
+    public function __construct($directoryUri, KeyPair $keyPair, HttpClient $http = null) {
         if (!is_string($directoryUri)) {
             throw new InvalidArgumentException(sprintf("\$directoryUri must be of type string, %s given.", gettype($directoryUri)));
         }
@@ -119,7 +120,8 @@ class AcmeClient {
 
         $this->http->request($request)->when(function ($error = null, Response $response = null) use ($deferred, $uri) {
             if ($error) {
-                $deferred->fail(new AcmeException("HEAD request to {$uri} failed, could not obtain a replay nonce.", null, $error));
+                /** @var Throwable|Exception $error */
+                $deferred->fail(new AcmeException("HEAD request to {$uri} failed, could not obtain a replay nonce: " . $error->getMessage(), null, $error));
             } else {
                 if (!$response->hasHeader("replay-nonce")) {
                     $deferred->fail(new AcmeException("HTTP response didn't carry replay-nonce header."));
@@ -193,9 +195,9 @@ class AcmeClient {
             $this->directory = $directory;
             $this->saveNonce($response);
         } catch (Exception $e) {
-            throw new AcmeException("Could not obtain directory.", null, $e);
+            throw new AcmeException("Could not obtain directory: " . $e->getMessage(), null, $e);
         } catch (Throwable $e) {
-            throw new AcmeException("Could not obtain directory.", null, $e);
+            throw new AcmeException("Could not obtain directory: " . $e->getMessage(), null, $e);
         }
     }
 
@@ -228,10 +230,10 @@ class AcmeClient {
         try {
             $response = (yield $this->http->request($uri));
             $this->saveNonce($response);
-        } catch (Exception $e) {
-            throw new AcmeException("GET request to {$uri} failed.", null, $e);
         } catch (Throwable $e) {
-            throw new AcmeException("GET request to {$uri} failed.", null, $e);
+            throw new AcmeException("GET request to {$uri} failed: " . $e->getMessage(), null, $e);
+        } catch (Exception $e) {
+            throw new AcmeException("GET request to {$uri} failed: " . $e->getMessage(), null, $e);
         }
 
         yield new CoroutineResult($response);
@@ -311,10 +313,10 @@ class AcmeClient {
                         continue;
                     }
                 }
-            } catch (Exception $e) {
-                throw new AcmeException("POST request to {$uri} failed.", null, $e);
             } catch (Throwable $e) {
-                throw new AcmeException("POST request to {$uri} failed.", null, $e);
+                throw new AcmeException("POST request to {$uri} failed: " . $e->getMessage(), null, $e);
+            } catch (Exception $e) {
+                throw new AcmeException("POST request to {$uri} failed: " . $e->getMessage(), null, $e);
             }
 
             yield new CoroutineResult($response);
