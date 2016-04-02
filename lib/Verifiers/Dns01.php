@@ -26,6 +26,11 @@ class Dns01 {
     /** @var Resolver */
     private $resolver;
 
+    /**
+     * Dns01 constructor.
+     *
+     * @param Resolver|null $resolver DNS resolver, otherwise a default resolver will be used
+     */
     public function __construct(Resolver $resolver = null) {
         $this->resolver = $resolver ?: \Amp\Dns\resolver();
     }

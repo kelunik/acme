@@ -11,6 +11,7 @@ namespace Kelunik\Acme\Verifiers;
 
 use Amp\Artax\Client;
 use Amp\Artax\Cookie\NullCookieJar;
+use Amp\Artax\HttpClient;
 use Amp\Artax\Response;
 use InvalidArgumentException;
 use Kelunik\Acme\AcmeException;
@@ -23,7 +24,12 @@ use Kelunik\Acme\AcmeException;
 class Http01 {
     private $client;
 
-    public function __construct(Client $client = null) {
+    /**
+     * Http01 constructor.
+     *
+     * @param HttpClient|null $client HTTP client to use, otherwise a default client will be used
+     */
+    public function __construct(HttpClient $client = null) {
         $this->client = $client ?: new Client(new NullCookieJar);
     }
 
