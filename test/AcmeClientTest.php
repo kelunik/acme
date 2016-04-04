@@ -90,10 +90,10 @@ class AcmeClientTest extends \PHPUnit_Framework_TestCase {
      * @expectedException \Kelunik\Acme\AcmeException
      * @expectedExceptionMessage HTTP response didn't carry replay-nonce header.
      */
-    public function failsWithWithoutNonce() {
+    public function failsWithoutNonce() {
         $client = new AcmeClient("http://127.0.0.1:4000/directory", (new OpenSSLKeyGenerator())->generate());
 
-        \Amp\wait($client->post("https://github.com/", []));
+        \Amp\wait($client->post("http://127.0.0.1:4000/", []));
     }
 
     /**
