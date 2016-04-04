@@ -300,81 +300,44 @@ class AcmeService {
      * Requests a new certificate.
      *
      * @api
-     * @param KeyPair $keyPair domain key pair
-     * @param array   $domains domains to include in the certificate (first will be used as common name)
+     * @param string $csr certificate signing request
      * @return \Amp\Promise resolves to the URI where the certificate will be provided
      * @throws AcmeException If something went wrong.
      */
-    public function requestCertificate(KeyPair $keyPair, array $domains) {
-        return \Amp\resolve($this->doRequestCertificate($keyPair, $domains));
+    public function requestCertificate($csr) {
+        return \Amp\resolve($this->doRequestCertificate($csr));
     }
 
     /**
      * Requests a new certificate.
      *
-     * @param KeyPair $keyPair domain key pair
-     * @param array   $domains domains to include in the certificate (first will be used as common name)
+     * @param string $csr certificate signing request
      * @return \Generator coroutine resolved by Amp returning the URI where the certificate will be provided
      * @throws AcmeException If something went wrong.
      */
-    private function doRequestCertificate(KeyPair $keyPair, array $domains) {
-        if (empty($domains)) {
-            throw new AcmeException("Parameter \$domains must not be empty.");
+    private function doRequestCertificate($csr) {
+        if (!is_string($csr)) {
+            throw new \InvalidArgumentException(sprintf("\$csr must be of type bool, %s given", gettype($csr)));
         }
-
-        if (!$privateKey = openssl_pkey_get_private($keyPair->getPrivate())) {
-            // TODO: Improve error message
-            throw new AcmeException("Couldn't use private key.");
-        }
-
-        $tempFile = tempnam(sys_get_temp_dir(), "acme_openssl_config_");
-        $tempConf = <<<EOL
-[ req ]
-distinguished_name = req_distinguished_name
-req_extensions = v3_req
-
-[ req_distinguished_name ]
-
-[ v3_req ]
-basicConstraints = CA:FALSE
-keyUsage = nonRepudiation, digitalSignature, keyEncipherment
-subjectAltName = @san
-
-[ san ]
-EOL;
-
-        $i = 0;
-
-        $san = implode("\n", array_map(function ($dns) use (&$i) {
-            $i++;
-
-            return "DNS.{$i} = {$dns}";
-        }, $domains));
-
-        yield \Amp\File\put($tempFile, $tempConf . "\n" . $san . "\n");
-
-        $csr = openssl_csr_new([
-            "CN" => reset($domains),
-        ], $privateKey, [
-            "digest_alg" => "sha256",
-            "req_extensions" => "v3_req",
-            "config" => $tempFile,
-        ]);
-
-        yield \Amp\File\unlink($tempFile);
-
-        if (!$csr) {
-            // TODO: Improve error message
-            throw new AcmeException("CSR could not be generated.");
-        }
-
-        openssl_csr_export($csr, $csr);
 
         $begin = "REQUEST-----";
         $end = "----END";
 
-        $csr = substr($csr, strpos($csr, $begin) + strlen($begin));
-        $csr = substr($csr, 0, strpos($csr, $end));
+        $beginPos = strpos($csr, $begin) + strlen($begin);
+
+        if ($beginPos === false) {
+            throw new InvalidArgumentException("Invalid CSR, maybe not in PEM format?\n{$csr}");
+        }
+
+        $csr = substr($csr, $beginPos);
+
+        $endPos = strpos($csr, $end);
+
+        if ($endPos === false) {
+            throw new InvalidArgumentException("Invalid CSR, maybe not in PEM format?\n{$csr}");
+        }
+
+        $csr = substr($csr, 0, $endPos);
 
         $enc = new Base64UrlSafeEncoder;
 
