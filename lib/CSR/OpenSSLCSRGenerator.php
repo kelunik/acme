@@ -9,6 +9,7 @@
 
 namespace Kelunik\Acme\CSR;
 
+use Amp\CoroutineResult;
 use Kelunik\Acme\AcmeException;
 use Kelunik\Acme\KeyPair;
 
@@ -83,6 +84,6 @@ EOL;
             throw new AcmeException("CSR could not be generated.");
         }
 
-        return openssl_csr_export($csr, $csr);
+        yield new CoroutineResult(openssl_csr_export($csr, $csr));
     }
 }
