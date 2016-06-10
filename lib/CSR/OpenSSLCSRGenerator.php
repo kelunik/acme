@@ -68,7 +68,7 @@ keyUsage = digitalSignature, nonRepudiation
 subjectAltName = {$san}
 EOL;
 
-        yield \Amp\File\put($tempFile, $tempConf . "\n" . $san . "\n");
+        yield \Amp\File\put($tempFile, $tempConf);
 
         $csr = openssl_csr_new([
             "CN" => reset($domains),
