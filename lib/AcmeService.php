@@ -506,58 +506,6 @@ class AcmeService {
     }
 
     /**
-     * Verifies a HTTP-01 challenge.
-     *
-     * Can be used to verify a challenge before requesting validation from a CA to catch errors early.
-     *
-     * @api
-     * @param string $domain domain to verify
-     * @param string $token challenge token
-     * @param string $keyAuthorization key authorization (expected payload)
-     * @return \Amp\Promise resolves to null
-     * @throws AcmeException If the challenge could not be verified.
-     */
-    public function verifyHttp01Challenge($domain, $token, $keyAuthorization) {
-        trigger_error("verifyHttp01Challenge is deprecated and will be removed in 0.4.0, use Http01Verifier::verifyChallenge", E_USER_DEPRECATED);
-
-        return (new Verifiers\Http01)->verifyChallenge($domain, $token, $keyAuthorization);
-    }
-
-    /**
-     * Verifies a DNS-01 Challenge.
-     *
-     * Can be used to verify a challenge before requesting validation from a CA to catch errors early.
-     *
-     * @api
-     * @param string $domain domain to verify
-     * @param string $keyAuthorization key authorization (expected payload)
-     * @return \Amp\Promise resolves to the DNS entry found
-     * @throws AcmeException If the challenge could not be verified.
-     */
-    public function verifyDns01Challenge($domain, $keyAuthorization) {
-        trigger_error("verifyDns01Challenge is deprecated and will be removed in 0.4.0, use Dns01Verifier::verifyChallenge", E_USER_DEPRECATED);
-
-        return (new Verifiers\Dns01)->verifyChallenge($domain, $keyAuthorization);
-    }
-
-    /**
-     * Generates the payload which must be provided in challenges, e.g. HTTP-01 and DNS-01.
-     *
-     * @api
-     * @param KeyPair $accountKeyPair account key pair
-     * @param string  $token challenge token
-     * @return string payload to be provided at /.well-known/acme-challenge/$token
-     * @throws AcmeException If something went wrong.
-     * @see https://github.com/ietf-wg-acme/acme/blob/master/draft-ietf-acme-acme.md#key-authorizations
-     * @deprecated Deprecated in favor of generateKeyAuthorization since 0.3.4, will be removed in 0.4.0
-     */
-    public function generateHttp01Payload(KeyPair $accountKeyPair, $token) {
-        trigger_error("generateHttp01Payload is deprecated in favor or \\Kelunik\\Acme\\generateKeyAuthorization and will be removed in 0.4.0", E_USER_DEPRECATED);
-
-        return generateKeyAuthorization($accountKeyPair, $token);
-    }
-
-    /**
      * Generates a new exception using the response to provide details.
      *
      * @param Response $response HTTP response to generate the exception from
