@@ -34,12 +34,17 @@ class OpenSSLKeyGenerator implements KeyGenerator {
             throw new \InvalidArgumentException("Keys with fewer than 2048 bits are not allowed!");
         }
 
-        $configFile = __DIR__ . "/../res/openssl.cnf";
+        $configFile = $defaultConfigFile = __DIR__ . "/../res/openssl.cnf";
 
         if (class_exists("Phar") && !empty(Phar::running(true))) {
             $configContent = file_get_contents($configFile);
+
             $configFile = tempnam(sys_get_temp_dir(), "acme_openssl_");
             file_put_contents($configFile, $configContent);
+
+            register_shutdown_function(function () use ($configFile) {
+                @unlink($configFile);
+            });
         }
 
         $res = openssl_pkey_new([
@@ -51,6 +56,10 @@ class OpenSSLKeyGenerator implements KeyGenerator {
         $success = openssl_pkey_export($res, $privateKey, null, [
             "config" => $configFile,
         ]);
+
+        if ($configFile !== $defaultConfigFile) {
+            @unlink($configFile);
+        }
 
         if (!$success) {
             openssl_pkey_free($res);
