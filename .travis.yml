@@ -24,7 +24,7 @@ before_install:
 install:
   - phpenv config-rm xdebug.ini || true
   - composer install
-  - composer require satooshi/php-coveralls dev-master --dev --no-update
+  - composer require satooshi/php-coveralls dev-master --dev
   - composer show --installed
 
 script:
