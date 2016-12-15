@@ -42,12 +42,12 @@ class Dns01 {
      *
      * @api
      * @param string $domain domain to verify
-     * @param string $keyAuthorization key authorization
+     * @param string $expectedPayload expected DNS record value
      * @return \Amp\Promise resolves to the DNS entry found
      * @throws AcmeException If the challenge could not be verified.
      */
-    public function verifyChallenge($domain, $keyAuthorization) {
-        return \Amp\resolve($this->doVerifyChallenge($domain, $keyAuthorization));
+    public function verifyChallenge($domain, $expectedPayload) {
+        return \Amp\resolve($this->doVerifyChallenge($domain, $expectedPayload));
     }
 
     /**
@@ -56,17 +56,17 @@ class Dns01 {
      * Can be used to verify a challenge before requesting validation from a CA to catch errors early.
      *
      * @param string $domain domain to verify
-     * @param string $keyAuthorization key authorization
+     * @param string $expectedPayload expected DNS record value
      * @return \Generator coroutine resolved to the DNS entry found
      * @throws AcmeException If the challenge could not be verified.
      */
-    private function doVerifyChallenge($domain, $keyAuthorization) {
+    private function doVerifyChallenge($domain, $expectedPayload) {
         if (!is_string($domain)) {
             throw new InvalidArgumentException(sprintf("\$domain must be of type string, %s given.", gettype($domain)));
         }
 
-        if (!is_string($keyAuthorization)) {
-            throw new InvalidArgumentException(sprintf("\$keyAuthorization must be of type string, %s given.", gettype($keyAuthorization)));
+        if (!is_string($expectedPayload)) {
+            throw new InvalidArgumentException(sprintf("\$expectedPayload must be of type string, %s given.", gettype($expectedPayload)));
         }
 
         $uri = "_acme-challenge." . $domain;
@@ -82,8 +82,8 @@ class Dns01 {
         list($record) = $dnsResponse;
         list($payload) = $record;
 
-        if ($payload !== \Kelunik\Acme\generateDns01Payload($keyAuthorization)) {
-            throw new AcmeException("Verification failed, please check DNS record under '{$uri}'. Expected: '" . \Kelunik\Acme\generateDns01Payload($keyAuthorization) . "', Got: '{$payload}'.");
+        if ($payload !== $expectedPayload) {
+            throw new AcmeException("Verification failed, please check DNS record under '{$uri}'. Expected: '{$expectedPayload}', Got: '{$payload}'.");
         }
 
         yield new CoroutineResult($dnsResponse);
