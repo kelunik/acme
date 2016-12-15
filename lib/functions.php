@@ -13,7 +13,8 @@ use InvalidArgumentException;
 use Namshi\JOSE\Base64\Base64UrlSafeEncoder;
 
 /**
- * Generates the payload which must be provided in challenges, e.g. HTTP-01 and DNS-01.
+ * Generates the a key authorization, which must be provided in challenges, e.g. directly in HTTP-01
+ * and further encoded for DNS-01.
  *
  * @api
  * @param KeyPair $accountKeyPair account key pair
@@ -48,4 +49,17 @@ function generateKeyAuthorization(KeyPair $accountKeyPair, $token) {
     ];
 
     return $token . "." . $enc->encode(hash("sha256", json_encode($payload), true));
+}
+
+/**
+ * Encodes a key authorization for use in the DNS-01 challenge as TXT payload.
+ *
+ * @api
+ * @param string $keyAuthorization key authorization generated using `generateKeyAuthorization`
+ * @return string Base64Url-encoded SHA256 digest of the `$keyAuthorization`
+ * @see https://tools.ietf.org/html/draft-ietf-acme-acme-01#section-7.5
+ */
+function generateDns01Payload($keyAuthorization) {
+    $encoder = new Base64UrlSafeEncoder;
+    return $encoder->encode(hash("sha256", $keyAuthorization, true));
 }
