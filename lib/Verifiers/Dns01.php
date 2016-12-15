@@ -42,7 +42,7 @@ class Dns01 {
      *
      * @api
      * @param string $domain domain to verify
-     * @param string $keyAuthorization key authorization (expected payload)
+     * @param string $keyAuthorization key authorization
      * @return \Amp\Promise resolves to the DNS entry found
      * @throws AcmeException If the challenge could not be verified.
      */
@@ -56,7 +56,7 @@ class Dns01 {
      * Can be used to verify a challenge before requesting validation from a CA to catch errors early.
      *
      * @param string $domain domain to verify
-     * @param string $keyAuthorization key authorization (expected payload)
+     * @param string $keyAuthorization key authorization
      * @return \Generator coroutine resolved to the DNS entry found
      * @throws AcmeException If the challenge could not be verified.
      */
@@ -82,8 +82,8 @@ class Dns01 {
         list($record) = $dnsResponse;
         list($payload) = $record;
 
-        if ($payload !== $keyAuthorization) {
-            throw new AcmeException("Verification failed, please check DNS record under '{$uri}'. Expected: '{$keyAuthorization}', Got: '{$payload}'.");
+        if ($payload !== \Kelunik\Acme\generateDns01Payload($keyAuthorization)) {
+            throw new AcmeException("Verification failed, please check DNS record under '{$uri}'. Expected: '" . \Kelunik\Acme\generateDns01Payload($keyAuthorization) . "', Got: '{$payload}'.");
         }
 
         yield new CoroutineResult($dnsResponse);
