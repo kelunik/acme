@@ -31,7 +31,7 @@
         "sabre/uri": "^1"
     },
     "require-dev": {
-        "phpunit/phpunit": "^5",
+        "phpunit/phpunit": "^4|^5",
         "phpdocumentor/phpdocumentor": "^2"
     },
     "extra": {

@@ -22,11 +22,9 @@ before_install:
   - ./test/.run-boulder.sh
 
 install:
-  - phpenv config-rm xdebug.ini
-  - composer self-update
-  - if [[ ${TRAVIS_PHP_VERSION:0:3} == "5.5" ]]; then composer require --dev --no-update phpunit/phpunit ^4; fi
+  - phpenv config-rm xdebug.ini || true
+  - composer install
   - composer require satooshi/php-coveralls dev-master --dev --no-update
-  - composer install --ignore-platform-reqs
   - composer show --installed
 
 script:
