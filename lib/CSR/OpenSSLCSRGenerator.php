@@ -10,6 +10,7 @@
 namespace Kelunik\Acme\CSR;
 
 use Amp\CoroutineResult;
+use Amp\Promise;
 use Kelunik\Acme\AcmeException;
 use Kelunik\Acme\KeyPair;
 
@@ -38,6 +39,10 @@ class OpenSSLCSRGenerator implements CSRGenerator {
 
     /**
      * {@inheritdoc}
+     *
+     * @param KeyPair $keyPair domain key pair
+     * @param array $domains list of domain names
+     * @return Promise resolves to a string (PEM encoded CSR)
      */
     public function generate(KeyPair $keyPair, array $domains) {
         if (!$privateKey = openssl_pkey_get_private($keyPair->getPrivate())) {
