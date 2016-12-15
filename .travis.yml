@@ -17,7 +17,7 @@ cache:
 
 before_install:
   - ./test/.run-boulder.sh
-  - sleep 10
+  - sleep 30
 
 install:
   - phpenv config-rm xdebug.ini
