@@ -22,6 +22,8 @@ class Http01VerificationTest extends \PHPUnit_Framework_TestCase {
      * @test
      */
     public function ignoresWrongPeerName() {
+        $this->markTestSkipped("Currently skipped as configuration is not in place for it.");
+
         /** @var Response $payloadResponse */
         $payloadResponse = \Amp\wait((new Client)->request("http://blog.kelunik.com/robots.txt"));
         $payload = trim($payloadResponse->getBody());

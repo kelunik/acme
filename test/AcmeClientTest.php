@@ -20,6 +20,17 @@ class AcmeClientTest extends \PHPUnit_Framework_TestCase {
 
     /**
      * @test
+     */
+    public function boulderConfigured() {
+        if (getenv("BOULDER_HOST") === false) {
+            $this->markTestSkipped("No Boulder host set. Set the environment variable BOULDER_HOST to enable those tests.");
+        }
+
+        $this->assertTrue(true);
+    }
+
+    /**
+     * @test
      * @expectedException \InvalidArgumentException
      * @expectedExceptionMessage directoryUri must be of type string
      */
@@ -29,42 +40,46 @@ class AcmeClientTest extends \PHPUnit_Framework_TestCase {
 
     /**
      * @test
+     * @depends boulderConfigured
      * @expectedException \Kelunik\Acme\AcmeException
      * @expectedExceptionMessage Could not obtain directory
      */
     public function failsIfDirectoryIsEmpty() {
-        $client = new AcmeClient("http://127.0.0.1:4000/", (new OpenSSLKeyGenerator())->generate());
+        $client = new AcmeClient(getenv("BOULDER_HOST") . "/", (new OpenSSLKeyGenerator())->generate());
         \Amp\wait($client->get("foobar"));
     }
 
     /**
      * @test
+     * @depends boulderConfigured
      * @expectedException \InvalidArgumentException
      * @expectedExceptionMessage resource must be of type string
      */
     public function failsIfPostResourceIsEmpty() {
-        $client = new AcmeClient("http://127.0.0.1:4000/directory", (new OpenSSLKeyGenerator())->generate());
+        $client = new AcmeClient(getenv("BOULDER_HOST") . "/directory", (new OpenSSLKeyGenerator())->generate());
         \Amp\wait($client->post(null, []));
     }
 
     /**
      * @test
+     * @depends boulderConfigured
      * @expectedException \Kelunik\Acme\AcmeException
      * @expectedExceptionMessage Resource not found in directory
      */
     public function failsIfResourceIsNoUriAndNotInDirectory() {
-        $client = new AcmeClient("http://127.0.0.1:4000/directory", (new OpenSSLKeyGenerator())->generate());
+        $client = new AcmeClient(getenv("BOULDER_HOST") . "/directory", (new OpenSSLKeyGenerator())->generate());
         \Amp\wait($client->post("foobar", []));
     }
 
     /**
      * @test
+     * @depends boulderConfigured
      */
     public function canFetchDirectory() {
-        $client = new AcmeClient("http://127.0.0.1:4000/directory", (new OpenSSLKeyGenerator())->generate());
+        $client = new AcmeClient(getenv("BOULDER_HOST") . "/directory", (new OpenSSLKeyGenerator())->generate());
 
         /** @var Response $response */
-        $response = \Amp\wait($client->get("http://127.0.0.1:4000/directory"));
+        $response = \Amp\wait($client->get(getenv("BOULDER_HOST") . "/directory"));
         $this->assertSame(200, $response->getStatus());
 
         $data = json_decode($response->getBody(), true);
@@ -78,31 +93,34 @@ class AcmeClientTest extends \PHPUnit_Framework_TestCase {
 
     /**
      * @test
+     * @depends boulderConfigured
      */
     public function fetchesNonceWhenNoneAvailable() {
-        $client = new AcmeClient("http://127.0.0.1:4000/directory", (new OpenSSLKeyGenerator())->generate());
+        $client = new AcmeClient(getenv("BOULDER_HOST") . "/directory", (new OpenSSLKeyGenerator())->generate());
 
-        \Amp\wait($client->post("http://127.0.0.1:4000/acme/new-reg", []));
+        \Amp\wait($client->post(getenv("BOULDER_HOST") . "/acme/new-reg", []));
     }
 
     /**
      * @test
+     * @depends boulderConfigured
      * @expectedException \Kelunik\Acme\AcmeException
      * @expectedExceptionMessage HTTP response didn't carry replay-nonce header.
      */
     public function failsWithoutNonce() {
-        $client = new AcmeClient("http://127.0.0.1:4000/directory", (new OpenSSLKeyGenerator())->generate());
+        $client = new AcmeClient(getenv("BOULDER_HOST") . "/directory", (new OpenSSLKeyGenerator())->generate());
 
-        \Amp\wait($client->post("http://127.0.0.1:4000/", []));
+        \Amp\wait($client->post(getenv("BOULDER_HOST") . "/", []));
     }
 
     /**
      * @test
+     * @depends boulderConfigured
      * @expectedException \Kelunik\Acme\AcmeException
      * @expectedExceptionMessage could not obtain a replay nonce
      */
     public function failsIfHostNotAvailable() {
-        $client = new AcmeClient("http://127.0.0.1:4000/directory", (new OpenSSLKeyGenerator())->generate());
+        $client = new AcmeClient(getenv("BOULDER_HOST") . "/directory", (new OpenSSLKeyGenerator())->generate());
 
         // mute because of stream_socket_enable_crypto(): SSL: Connection refused warning
         @\Amp\wait($client->post("https://127.0.0.1:444/", []));
@@ -110,6 +128,7 @@ class AcmeClientTest extends \PHPUnit_Framework_TestCase {
 
     /**
      * @test
+     * @depends boulderConfigured
      * @expectedException \Kelunik\Acme\AcmeException
      * @expectedExceptionMessageRegExp ~GET request to .* failed~
      */
@@ -119,24 +138,26 @@ class AcmeClientTest extends \PHPUnit_Framework_TestCase {
 
         \Amp\Dns\resolver($resolver);
 
-        $client = new AcmeClient("http://127.0.0.1:4000/directory", (new OpenSSLKeyGenerator())->generate());
+        $client = new AcmeClient(getenv("BOULDER_HOST") . "/directory", (new OpenSSLKeyGenerator())->generate());
 
         \Amp\wait($client->get("https://localhost:4000/"));
     }
 
     /**
      * @test
+     * @depends boulderConfigured
      * @expectedException \InvalidArgumentException
      * @expectedExceptionMessage resource must be of type string
      */
     public function failsWithGetNotString() {
-        $client = new AcmeClient("http://127.0.0.1:4000/directory", (new OpenSSLKeyGenerator())->generate());
+        $client = new AcmeClient(getenv("BOULDER_HOST") . "/directory", (new OpenSSLKeyGenerator())->generate());
 
         \Amp\wait($client->get(null));
     }
 
     /**
      * @test
+     * @depends boulderConfigured
      * @expectedException \Kelunik\Acme\AcmeException
      * @expectedExceptionMessage Invalid directory response. HTTP response code: 400
      */
@@ -148,13 +169,14 @@ class AcmeClientTest extends \PHPUnit_Framework_TestCase {
             });
         });
 
-        $client = new AcmeClient("http://127.0.0.1:4000/directory", (new OpenSSLKeyGenerator())->generate(), $http);
+        $client = new AcmeClient(getenv("BOULDER_HOST") . "/directory", (new OpenSSLKeyGenerator())->generate(), $http);
 
         \Amp\wait($client->get(AcmeResource::CHALLENGE));
     }
 
     /**
      * @test
+     * @depends boulderConfigured
      * @expectedException \Kelunik\Acme\AcmeException
      * @expectedExceptionMessage Could not obtain directory: Invalid directory response: Foobar
      */
@@ -169,13 +191,14 @@ class AcmeClientTest extends \PHPUnit_Framework_TestCase {
             });
         });
 
-        $client = new AcmeClient("http://127.0.0.1:4000/directory", (new OpenSSLKeyGenerator())->generate(), $http);
+        $client = new AcmeClient(getenv("BOULDER_HOST") . "/directory", (new OpenSSLKeyGenerator())->generate(), $http);
 
         \Amp\wait($client->get(AcmeResource::CHALLENGE));
     }
 
     /**
      * @test
+     * @depends boulderConfigured
      * @expectedException \Kelunik\Acme\AcmeException
      * @expectedExceptionMessage too many badNonce errors
      */
@@ -196,13 +219,14 @@ class AcmeClientTest extends \PHPUnit_Framework_TestCase {
             });
         });
 
-        $client = new AcmeClient("http://127.0.0.1:4000/directory", (new OpenSSLKeyGenerator())->generate(), $http);
+        $client = new AcmeClient(getenv("BOULDER_HOST") . "/directory", (new OpenSSLKeyGenerator())->generate(), $http);
 
         \Amp\wait($client->post("new-reg", []));
     }
 
     /**
      * @test
+     * @depends boulderConfigured
      */
     public function succeedsWithOneBadNonceError() {
         $encounteredBadNonceError = false;
@@ -225,7 +249,7 @@ class AcmeClientTest extends \PHPUnit_Framework_TestCase {
             });
         });
 
-        $client = new AcmeClient("http://127.0.0.1:4000/directory", (new OpenSSLKeyGenerator())->generate(), $http);
+        $client = new AcmeClient(getenv("BOULDER_HOST") . "/directory", (new OpenSSLKeyGenerator())->generate(), $http);
 
         \Amp\wait($client->post(AcmeResource::NEW_REGISTRATION, []));
 

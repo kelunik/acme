@@ -12,8 +12,12 @@ class AcmeServiceTest extends \PHPUnit_Framework_TestCase {
         \Amp\reactor(\Amp\driver());
         \Amp\Dns\resolver(\Amp\Dns\driver());
 
+        if (getenv("BOULDER_HOST") === false) {
+            $this->markTestSkipped("No Boulder host set. Set the environment variable BOULDER_HOST to enable those tests.");
+        }
+
         $keyPair = (new OpenSSLKeyGenerator())->generate();
-        $client = new AcmeClient("http://127.0.0.1:4000/directory", $keyPair);
+        $client = new AcmeClient(getenv("BOULDER_HOST") . "/directory", $keyPair);
         $this->acme = new AcmeService($client);
     }
 
