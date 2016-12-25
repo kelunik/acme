@@ -16,12 +16,13 @@ namespace Kelunik\Acme;
  * @package Kelunik\Acme
  */
 interface KeyGenerator {
-    /**
-     * Generates a new key pair with the given length in bits.
-     *
-     * @api
-     * @param int $bits length of the key
-     * @return KeyPair generated key pair
-     */
-    public function generate($bits);
+  /**
+   * Generates a new key pair with the given length in bits or an Eliptic curve.
+   *
+   * @api
+   * @param int|string $bits length of the key or the Eliptic curve name
+   * @param $key_type int type of the key
+   * @return KeyPair generated key pair
+   */
+  public function generate($bits, $key_type);
 }
