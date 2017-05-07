@@ -280,7 +280,7 @@ class AcmeClient {
             $attempt++;
 
             if ($attempt > 3) {
-                throw new AcmeException("POST request to {$uri} failed, received too many badNonce errors.");
+                throw new AcmeException("POST request to {$uri} failed, received too many errors.");
             }
 
             $enc = new Base64UrlSafeEncoder();
@@ -312,6 +312,13 @@ class AcmeClient {
                     if ($info && isset($info->type) && ($info->type === "urn:acme:badNonce" or $info->type === "urn:acme:error:badNonce")) {
                         continue;
                     }
+                } else if ($response->getStatus() === 429) {
+                    /**
+                     * Hit rate limit
+                     * @{link} https://letsencrypt.org/docs/rate-limits/
+                     */
+                    sleep(1);
+                    continue;
                 }
             } catch (Throwable $e) {
                 throw new AcmeException("POST request to {$uri} failed: " . $e->getMessage(), null, $e);
