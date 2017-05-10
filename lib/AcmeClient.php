@@ -283,7 +283,7 @@ class AcmeClient {
             if ($attempt > 3) {
                 throw new AcmeException("POST request to {$uri} failed, received too many errors (last code: ${statusCode}).");
             }
-            
+
             $enc = new Base64UrlSafeEncoder();
             $jws = new SimpleJWS([
                 "alg" => "RS256",
