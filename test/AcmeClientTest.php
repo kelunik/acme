@@ -200,7 +200,7 @@ class AcmeClientTest extends \PHPUnit_Framework_TestCase {
      * @test
      * @depends boulderConfigured
      * @expectedException \Kelunik\Acme\AcmeException
-     * @expectedExceptionMessage too many badNonce errors
+     * @expectedExceptionMessage too many errors (last code: 400)
      */
     public function failsWithTooManyBadNonceErrors() {
         $http = $this->getMockBuilder(HttpClient::class)->getMock();

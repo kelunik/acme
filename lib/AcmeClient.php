@@ -275,14 +275,15 @@ class AcmeClient {
         $uri = (yield $this->getResourceUri($resource));
 
         $attempt = 0;
+        $statusCode = null;
 
         do {
             $attempt++;
 
             if ($attempt > 3) {
-                throw new AcmeException("POST request to {$uri} failed, received too many errors.");
+                throw new AcmeException("POST request to {$uri} failed, received too many errors (last code: ${statusCode}).");
             }
-
+            
             $enc = new Base64UrlSafeEncoder();
             $jws = new SimpleJWS([
                 "alg" => "RS256",
@@ -305,14 +306,14 @@ class AcmeClient {
                 /** @var Response $response */
                 $response = (yield $this->http->request($request));
                 $this->saveNonce($response);
-
-                if ($response->getStatus() === 400) {
+                $statusCode = $response->getStatus();
+                if ($statusCode === 400) {
                     $info = json_decode($response->getBody());
 
-                    if ($info && isset($info->type) && ($info->type === "urn:acme:badNonce" or $info->type === "urn:acme:error:badNonce")) {
+                    if (!empty($info->type) && ($info->type === "urn:acme:badNonce" or $info->type === "urn:acme:error:badNonce")) {
                         continue;
                     }
-                } else if ($response->getStatus() === 429) {
+                } else if ($statusCode === 429) {
                     /**
                      * Hit rate limit
                      * @{link} https://letsencrypt.org/docs/rate-limits/
