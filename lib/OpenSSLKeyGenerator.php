@@ -22,17 +22,43 @@ class OpenSSLKeyGenerator implements KeyGenerator {
      * Generates a new key pair with the given length in bits.
      *
      * @api
-     * @param int $bits length of the key
+     * @param int|string $bits length of the key or the Eliptic curve name
+     * @param $key_type int type of the key
      * @return KeyPair generated key pair
      */
-    public function generate($bits = 2048) {
-        if (!is_int($bits)) {
+    public function generate($bits = 2048, $key_type = OPENSSL_KEYTYPE_RSA) {
+      $key_options = [];
+      switch ($key_type) {
+        case OPENSSL_KEYTYPE_RSA:
+          if (!is_int($bits)) {
             throw new \InvalidArgumentException(sprintf("\$bits must be of type int, %s given", gettype($bits)));
-        }
+          }
 
-        if ($bits < 2048) {
+          if ($bits < 2048) {
             throw new \InvalidArgumentException("Keys with fewer than 2048 bits are not allowed!");
-        }
+          }
+
+          $key_options["private_key_bits"] = $bits;
+
+          break;
+
+        case OPENSSL_KEYTYPE_EC:
+          if (!function_exists('openssl_get_curve_names')) {
+            throw new \InvalidArgumentException("Attempting to create a key on a system that does not support EC keys.");
+          }
+          $curves = openssl_get_curve_names();
+          if (!in_array($bits, $curves)) {
+            throw new \InvalidArgumentException("Curve not supported on this system.");
+          }
+
+          $key_options['curve_name'] = $bits;
+          $key_options['private_key_bits'] = 2048;
+
+          break;
+
+        default:
+          throw new \InvalidArgumentException("Unsupported key type.");
+      }
 
         $configFile = $defaultConfigFile = __DIR__ . "/../res/openssl.cnf";
 
@@ -48,10 +74,9 @@ class OpenSSLKeyGenerator implements KeyGenerator {
         }
 
         $res = openssl_pkey_new([
-            "private_key_type" => OPENSSL_KEYTYPE_RSA,
-            "private_key_bits" => $bits,
+            "private_key_type" => $key_type,
             "config" => $configFile,
-        ]);
+        ] + $key_options);
 
         $success = openssl_pkey_export($res, $privateKey, null, [
             "config" => $configFile,
