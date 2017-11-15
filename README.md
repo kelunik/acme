@@ -16,7 +16,7 @@ composer require kelunik/acme
 
 This package follows semantic versioning. Although there's no `v1.0.0` yet, it's safe to use it as a dependency, because breaking changes won't be installed when using it as `^0.3`.
 
-**[Documentation](http://blog.kelunik.com/docs/acme/)**
+**[Documentation](https://docs.kelunik.com/kelunik/acme)**
 
 The library is fully documented using PHPDoc.
 
