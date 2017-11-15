@@ -17,6 +17,7 @@ use Amp\Artax\Response;
 use Amp\CoroutineResult;
 use Amp\Deferred;
 use Amp\Failure;
+use Amp\Pause;
 use Amp\Success;
 use Exception;
 use InvalidArgumentException;
@@ -318,7 +319,7 @@ class AcmeClient {
                      * Hit rate limit
                      * @{link} https://letsencrypt.org/docs/rate-limits/
                      */
-                    sleep(1);
+                    yield new Pause(1000);
                     continue;
                 }
             } catch (Throwable $e) {
