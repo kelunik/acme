@@ -2,15 +2,15 @@
 
 namespace Kelunik\Acme;
 
-use Amp\Artax\Response;
 use Amp\Dns\NoRecordException;
 use Amp\Dns\Record;
 use Amp\Dns\ResolutionException;
 use Amp\Dns\Resolver;
 use Amp\Failure;
 use Amp\Success;
+use PHPUnit\Framework\TestCase;
 
-class Dns01VerificationTest extends \PHPUnit_Framework_TestCase {
+class Dns01VerificationTest extends TestCase {
     /**
      * @var \PHPUnit_Framework_MockObject_MockObject
      */
@@ -22,8 +22,6 @@ class Dns01VerificationTest extends \PHPUnit_Framework_TestCase {
     private $verifier;
 
     public function setUp() {
-        \Amp\reactor(\Amp\driver());
-
         $this->resolver = $this->getMockBuilder(Resolver::class)->getMock();
         $this->verifier = new Verifiers\Dns01($this->resolver);
     }
@@ -35,7 +33,7 @@ class Dns01VerificationTest extends \PHPUnit_Framework_TestCase {
      */
     public function failsOnDnsNotFound() {
         $this->resolver->method("query")->willReturn(new Failure(new NoRecordException));
-        \Amp\wait($this->verifier->verifyChallenge("example.com", "foobar"));
+        \Amp\Promise\wait($this->verifier->verifyChallenge("example.com", "foobar"));
     }
 
     /**
@@ -45,40 +43,41 @@ class Dns01VerificationTest extends \PHPUnit_Framework_TestCase {
      */
     public function failsOnGeneralDnsIssue() {
         $this->resolver->method("query")->willReturn(new Failure(new ResolutionException));
-        \Amp\wait($this->verifier->verifyChallenge("example.com", "foobar"));
+        \Amp\Promise\wait($this->verifier->verifyChallenge("example.com", "foobar"));
     }
 
     /**
      * @test
      * @expectedException \Kelunik\Acme\AcmeException
-     * @expectedExceptionMessage Verification failed, please check DNS record under '_acme-challenge.example.com'.
+     * @expectedExceptionMessage Verification failed, please check DNS record for '_acme-challenge.example.com'.
      */
     public function failsOnWrongPayload() {
-        $this->resolver->method("query")->willReturn(new Success([["xyz", Record::TXT, 300]]));
-        \Amp\wait($this->verifier->verifyChallenge("example.com", "foobar"));
+        $this->resolver->method("query")->willReturn(new Success([new Record("xyz", Record::TXT, 300)]));
+        \Amp\Promise\wait($this->verifier->verifyChallenge("example.com", "foobar"));
     }
 
     /**
      * @test
      */
     public function succeedsOnRightPayload() {
-        $this->resolver->method("query")->willReturn(new Success([["foobar", Record::TXT, 300]]));
-        \Amp\wait($this->verifier->verifyChallenge("example.com", "foobar"));
+        $this->resolver->method("query")->willReturn(new Success([new Record("foobar", Record::TXT, 300)]));
+        \Amp\Promise\wait($this->verifier->verifyChallenge("example.com", "foobar"));
+        $this->addToAssertionCount(1);
     }
 
     /**
      * @test
-     * @expectedException \InvalidArgumentException
+     * @expectedException \TypeError
      */
     public function failsWithDomainNotString() {
-        \Amp\wait($this->verifier->verifyChallenge(null, ""));
+        \Amp\Promise\wait($this->verifier->verifyChallenge(null, ""));
     }
 
     /**
      * @test
-     * @expectedException \InvalidArgumentException
+     * @expectedException \TypeError
      */
     public function failsWithPayloadNotString() {
-        \Amp\wait($this->verifier->verifyChallenge("example.com", null));
+        \Amp\Promise\wait($this->verifier->verifyChallenge("example.com", null));
     }
 }

@@ -2,15 +2,20 @@
 
 namespace Kelunik\Acme;
 
-class KeyAuthorizationTest extends \PHPUnit_Framework_TestCase {
+use Kelunik\Acme\Crypto\Backend\OpensslBackend;
+use Kelunik\Acme\Crypto\PrivateKey;
+use Kelunik\Acme\Crypto\RsaKeyGenerator;
+use PHPUnit\Framework\TestCase;
+
+class KeyAuthorizationTest extends TestCase {
     /**
      * @test
-     * @expectedException \InvalidArgumentException
-     * @expectedExceptionMessage token must be of type string
+     * @expectedException \TypeError
+     * @expectedExceptionMessage must be of the type string
      */
     public function failsIfTokenNotString() {
-        $keyPair = (new OpenSSLKeyGenerator)->generate();
-        generateKeyAuthorization($keyPair, null);
+        $keyPair = (new RsaKeyGenerator)->generateKey();
+        generateKeyAuthorization($keyPair, null, new OpensslBackend);
     }
 
     /**
@@ -19,17 +24,17 @@ class KeyAuthorizationTest extends \PHPUnit_Framework_TestCase {
      * @expectedExceptionMessage Couldn't read private key.
      */
     public function failsWithInvalidKey() {
-        $keyPair = new KeyPair("abc", "def");
-        generateKeyAuthorization($keyPair, "foobar");
+        $keyPair = new PrivateKey('abc');
+        generateKeyAuthorization($keyPair, 'foobar', new OpensslBackend);
     }
 
     /**
      * @test
      */
     public function containsTokenOnSuccess() {
-        $token = "some-random-token";
-        $keyPair = (new OpenSSLKeyGenerator)->generate();
-        $payload = generateKeyAuthorization($keyPair, $token);
-        $this->assertStringStartsWith($token . ".", $payload);
+        $token = 'some-random-token';
+        $keyPair = (new RsaKeyGenerator)->generateKey();
+        $payload = generateKeyAuthorization($keyPair, $token, new OpensslBackend);
+        $this->assertStringStartsWith($token . '.', $payload);
     }
 }

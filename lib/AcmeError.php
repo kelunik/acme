@@ -3,7 +3,7 @@
 /**
  * This file is part of the ACME package.
  *
- * @copyright Copyright (c) 2015-2016, Niklas Keller
+ * @copyright Copyright (c) 2015-2017, Niklas Keller
  * @license MIT
  */
 
@@ -15,49 +15,49 @@ namespace Kelunik\Acme;
  * @author Niklas Keller <me@kelunik.com>
  * @package Kelunik\Acme
  */
-class AcmeError {
+final class AcmeError {
     /**
      * Bad CSR.
      */
-    const TYPE_BAD_CSR = "badCSR";
+    const TYPE_BAD_CSR = 'badCSR';
 
     /**
      * Bad replay nonce.
      */
-    const TYPE_BAD_NONCE = "badNonce";
+    const TYPE_BAD_NONCE = 'badNonce';
 
     /**
      * Connection error.
      */
-    const TYPE_CONNECTION = "connection";
+    const TYPE_CONNECTION = 'connection';
 
     /**
      * Error related to DNSSEC.
      */
-    const TYPE_DNSSEC = "dnssec";
+    const TYPE_DNSSEC = 'dnssec';
 
     /**
      * Malformed request.
      */
-    const TYPE_MALFORMED = "malformed";
+    const TYPE_MALFORMED = 'malformed';
 
     /**
      * Internal server error.
      */
-    const TYPE_SERVER_INTERNAL = "serverInternal";
+    const TYPE_SERVER_INTERNAL = 'serverInternal';
 
     /**
      * TLS error.
      */
-    const TYPE_TLS = "tls";
+    const TYPE_TLS = 'tls';
 
     /**
      * Unauthorized.
      */
-    const TYPE_UNAUTHORIZED = "unauthorized";
+    const TYPE_UNAUTHORIZED = 'unauthorized';
 
     /**
      * Unknown host.
      */
-    const TYPE_UNKNOWN_HOST = "unknownHost";
+    const TYPE_UNKNOWN_HOST = 'unknownHost';
 }

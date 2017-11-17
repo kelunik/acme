@@ -3,27 +3,27 @@
 /**
  * This file is part of the ACME package.
  *
- * @copyright Copyright (c) 2015-2016, Niklas Keller
+ * @copyright Copyright (c) 2015-2017, Niklas Keller
  * @license MIT
  */
 
 namespace Kelunik\Acme;
 
 use Amp\Artax\Client;
-use Amp\Artax\Cookie\NullCookieJar;
-use Amp\Artax\HttpClient;
+use Amp\Artax\DefaultClient;
+use Amp\Artax\HttpException;
 use Amp\Artax\Request;
 use Amp\Artax\Response;
-use Amp\CoroutineResult;
-use Amp\Deferred;
+use Amp\Delayed;
 use Amp\Failure;
-use Amp\Pause;
+use Amp\Promise;
 use Amp\Success;
 use Exception;
-use InvalidArgumentException;
-use Namshi\JOSE\Base64\Base64UrlSafeEncoder;
-use Namshi\JOSE\SimpleJWS;
+use Kelunik\Acme\Crypto\Backend\Backend;
+use Kelunik\Acme\Crypto\Backend\OpensslBackend;
+use Kelunik\Acme\Crypto\PrivateKey;
 use Throwable;
+use function Amp\call;
 
 /**
  * Low level ACME client.
@@ -31,29 +31,34 @@ use Throwable;
  * @author Niklas Keller <me@kelunik.com>
  * @package Kelunik\Acme
  */
-class AcmeClient {
+final class AcmeClient {
     /**
-     * @var HttpClient HTTP client
+     * @var Client HTTP client.
      */
     private $http;
 
     /**
-     * @var KeyPair account key pair
+     * @var Backend Crypto backend.
      */
-    private $keyPair;
+    private $cryptoBackend;
 
     /**
-     * @var string directory URI of the ACME server
+     * @var PrivateKey Account key.
+     */
+    private $accountKey;
+
+    /**
+     * @var string Directory URI of the ACME server.
      */
     private $directoryUri;
 
     /**
-     * @var array dictionary contents of the ACME server
+     * @var array Directory contents of the ACME server.
      */
     private $directory;
 
     /**
-     * @var array saved nonces for use in future requests
+     * @var array Cached nonces for use in future requests.
      */
     private $nonces;
 
@@ -61,29 +66,32 @@ class AcmeClient {
      * AcmeClient constructor.
      *
      * @api
-     * @param string      $directoryUri URI to the ACME server directory
-     * @param KeyPair     $keyPair account key pair
-     * @param HttpClient|null $http custom HTTP client, default client will be used if no value is provided
+     *
+     * @param string       $directoryUri URI to the ACME server directory.
+     * @param PrivateKey   $accountKey Account key.
+     * @param Client|null  $http Custom HTTP client, a default client will be used if no value is provided.
+     * @param Backend|null $cryptoBackend Custom crypto backend, a default OpensslBackend will be used if no value is
+     *     provided.
      */
-    public function __construct($directoryUri, KeyPair $keyPair, HttpClient $http = null) {
-        if (!is_string($directoryUri)) {
-            throw new InvalidArgumentException(sprintf("\$directoryUri must be of type string, %s given.", gettype($directoryUri)));
-        }
-
+    public function __construct(string $directoryUri, PrivateKey $accountKey, Client $http = null, Backend $cryptoBackend = null) {
         $this->directoryUri = $directoryUri;
-        $this->keyPair = $keyPair;
-        $this->http = $http ?: $this->buildClient();
+        $this->accountKey = $accountKey;
+        $this->http = $http ?? $this->buildClient();
+        $this->cryptoBackend = $cryptoBackend ?? new OpensslBackend;
         $this->nonces = [];
     }
 
     /**
-     * Constructs a default HTTP client.
+     * Constructs the default HTTP client.
      *
      * @return Client
      */
-    private function buildClient() {
-        $client = new Client(new NullCookieJar);
-        $client->setOption(Client::OP_DEFAULT_USER_AGENT, "kelunik/acme");
+    private function buildClient(): Client {
+        $client = new DefaultClient;
+        $client->setOption(Client::OP_DEFAULT_HEADERS, [
+            'user-agent' => 'kelunik/acme',
+        ]);
+
         return $client;
     }
 
@@ -91,13 +99,10 @@ class AcmeClient {
      * Pops a locally stored nonce or requests a new one for usage.
      *
      * @param string $uri URI to issue the HEAD request against if no nonce is stored locally.
-     * @return \Amp\Promise resolves to the nonce value
+     *
+     * @return Promise Resolves to a valid nonce.
      */
-    private function getNonce($uri) {
-        if (!is_string($uri)) {
-            throw new InvalidArgumentException(sprintf("\$uri must be of type string, %s given.", gettype($uri)));
-        }
-
+    private function getNonce(string $uri): Promise {
         if (empty($this->nonces)) {
             return $this->requestNonce($uri);
         }
@@ -108,53 +113,49 @@ class AcmeClient {
     /**
      * Requests a new request nonce from the server.
      *
-     * @param string $uri URI to issue the HEAD request against
-     * @return \Amp\Promise resolves to the retrieved nonce
+     * @param string $uri URI to issue the HEAD request against.
+     *
+     * @return Promise Resolves to a valid nonce.
      */
-    private function requestNonce($uri) {
-        if (!is_string($uri)) {
-            throw new InvalidArgumentException(sprintf("\$uri must be of type string, %s given.", gettype($uri)));
-        }
+    private function requestNonce(string $uri): Promise {
+        return call(function () use ($uri) {
+            $request = new Request($uri, 'HEAD');
 
-        $deferred = new Deferred;
-        $request = (new Request)->setMethod("HEAD")->setUri($uri);
+            try {
+                /** @var Response $response */
+                $response = yield $this->http->request($request, [
+                    Client::OP_DISCARD_BODY => true,
+                ]);
 
-        $this->http->request($request)->when(function ($error = null, Response $response = null) use ($deferred, $uri) {
-            if ($error) {
-                /** @var Throwable|Exception $error */
-                $deferred->fail(new AcmeException("HEAD request to {$uri} failed, could not obtain a replay nonce: " . $error->getMessage(), null, $error));
-            } else {
-                if (!$response->hasHeader("replay-nonce")) {
-                    $deferred->fail(new AcmeException("HTTP response didn't carry replay-nonce header."));
-                } else {
-                    list($nonce) = $response->getHeader("replay-nonce");
-                    $deferred->succeed($nonce);
+                if (!$response->hasHeader('replay-nonce')) {
+                    throw new AcmeException("HTTP response didn't carry replay-nonce header.");
                 }
+
+                return $response->getHeader('replay-nonce');
+            } catch (HttpException $e) {
+                throw new AcmeException("HEAD request to {$uri} failed, could not obtain a replay nonce: " . $e->getMessage(), null, $e);
             }
         });
-
-        return $deferred->promise();
     }
 
     /**
      * Returns the URI to a resource by querying the directory. Can also handle URIs and returns them directly.
      *
-     * @param string $resource URI or directory entry
-     * @return \Amp\Promise resolves to the resource URI
+     * @param string $resource URI or directory entry.
+     *
+     * @return Promise Resolves to the resource URI.
      * @throws AcmeException If the specified resource is not in the directory.
      */
-    private function getResourceUri($resource) {
-        if (!is_string($resource)) {
-            throw new InvalidArgumentException(sprintf("\$resource must be of type string, %s given.", gettype($resource)));
-        }
-
+    private function getResourceUri(string $resource): Promise {
         // ACME MUST be served over HTTPS, but we use HTTP for testing …
-        if (substr($resource, 0, 7) === "http://" || substr($resource, 0, 8) === "https://") {
+        if (0 === strpos($resource, 'http://') || 0 === strpos($resource, 'https://')) {
             return new Success($resource);
         }
 
         if (!$this->directory) {
-            return \Amp\pipe(\Amp\resolve($this->fetchDirectory()), function () use ($resource) {
+            return call(function () use ($resource) {
+                yield $this->fetchDirectory();
+
                 return $this->getResourceUri($resource);
             });
         }
@@ -169,181 +170,143 @@ class AcmeClient {
     /**
      * Retrieves the directory and stores it in the directory property.
      *
-     * @return \Generator coroutine resolved by Amp.
+     * @return Promise Resolves once the directory is fetched.
      * @throws AcmeException If the directory could not be fetched or was invalid.
      */
-    private function fetchDirectory() {
-        try {
-            /** @var Response $response */
-            $response = (yield $this->http->request($this->directoryUri));
+    private function fetchDirectory(): Promise {
+        return call(function () {
+            try {
+                /** @var Response $response */
+                $response = yield $this->http->request($this->directoryUri);
+                $directory = json_decode(yield $response->getBody(), true);
 
-            if ($response->getStatus() !== 200) {
-                $info = json_decode($response->getBody());
+                if ($response->getStatus() !== 200) {
+                    $error = $directory;
 
-                if (isset($info->type, $info->detail)) {
-                    throw new AcmeException("Invalid directory response: {$info->detail}", $info->type);
+                    if (isset($error['type'], $error['detail'])) {
+                        throw new AcmeException("Invalid directory response: {$error['detail']}", $error['type']);
+                    }
+
+                    throw new AcmeException('Invalid directory response. HTTP response code: ' . $response->getStatus());
                 }
 
-                throw new AcmeException("Invalid directory response. HTTP response code: " . $response->getStatus());
+                if (empty($directory)) {
+                    throw new AcmeException('Invalid empty directory.');
+                }
+
+                $this->directory = $directory;
+                $this->saveNonce($response);
+            } catch (Throwable $e) {
+                throw new AcmeException('Could not obtain directory: ' . $e->getMessage(), null, $e);
             }
-
-            $directory = json_decode($response->getBody(), true);
-
-            if (empty($directory)) {
-                throw new AcmeException("Invalid directory: empty!");
-            }
-
-            $this->directory = $directory;
-            $this->saveNonce($response);
-        } catch (Exception $e) {
-            throw new AcmeException("Could not obtain directory: " . $e->getMessage(), null, $e);
-        } catch (Throwable $e) {
-            throw new AcmeException("Could not obtain directory: " . $e->getMessage(), null, $e);
-        }
+        });
     }
 
     /**
      * Retrieves a resource using a GET request.
      *
      * @api
-     * @param string $resource resource to fetch
-     * @return \Amp\Promise resolves to the HTTP response
-     * @throws AcmeException If the request failed.
-     */
-    public function get($resource) {
-        return \Amp\resolve($this->doGet($resource));
-    }
-
-    /**
-     * Retrieves a resource using a GET request.
      *
-     * @param string $resource resource to fetch
-     * @return \Generator coroutine resolved by Amp returning the HTTP response
-     * @throws AcmeException If the request failed.
-     */
-    private function doGet($resource) {
-        if (!is_string($resource)) {
-            throw new InvalidArgumentException(sprintf("\$resource must be of type string, %s given.", gettype($resource)));
-        }
-
-        $uri = (yield $this->getResourceUri($resource));
-
-        try {
-            $response = (yield $this->http->request($uri));
-            $this->saveNonce($response);
-        } catch (Throwable $e) {
-            throw new AcmeException("GET request to {$uri} failed: " . $e->getMessage(), null, $e);
-        } catch (Exception $e) {
-            throw new AcmeException("GET request to {$uri} failed: " . $e->getMessage(), null, $e);
-        }
-
-        yield new CoroutineResult($response);
-    }
-
-    /**
-     * Retrieves a resource using a POST request.
+     * @param string $resource Resource to fetch.
      *
-     * @api
-     * @param string $resource resource to fetch
-     * @param array  $payload
-     * @return \Amp\Promise resolves to the HTTP response
+     * @return Promise Resolves to the HTTP response.
      * @throws AcmeException If the request failed.
      */
-    public function post($resource, array $payload) {
-        return \Amp\resolve($this->doPost($resource, $payload));
-    }
-
-    /**
-     * Retrieves a resource using a POST request.
-     *
-     * @param string $resource resource to fetch
-     * @param array  $payload
-     * @return \Generator coroutine resolved by Amp returning the HTTP response
-     * @throws AcmeException If the request failed.
-     */
-    private function doPost($resource, array $payload) {
-        if (!is_string($resource)) {
-            throw new InvalidArgumentException(sprintf("\$resource must be of type string, %s given.", gettype($resource)));
-        }
-
-        $privateKey = openssl_pkey_get_private($this->keyPair->getPrivate());
-        $details = openssl_pkey_get_details($privateKey);
-
-        if ($details["type"] !== OPENSSL_KEYTYPE_RSA) {
-            throw new \RuntimeException("Only RSA keys are supported right now.");
-        }
-
-        $uri = (yield $this->getResourceUri($resource));
-
-        $attempt = 0;
-        $statusCode = null;
-
-        do {
-            $attempt++;
-
-            if ($attempt > 3) {
-                throw new AcmeException("POST request to {$uri} failed, received too many errors (last code: ${statusCode}).");
-            }
-
-            $enc = new Base64UrlSafeEncoder();
-            $jws = new SimpleJWS([
-                "alg" => "RS256",
-                "jwk" => [
-                    "kty" => "RSA",
-                    "n" => $enc->encode($details["rsa"]["n"]),
-                    "e" => $enc->encode($details["rsa"]["e"]),
-                ],
-                "nonce" => (yield $this->getNonce($uri)),
-            ]);
-
-            $payload["resource"] = isset($payload["resource"]) ? $payload["resource"] : $resource;
-
-            $jws->setPayload($payload);
-            $jws->sign($privateKey);
-
-            $request = (new Request)->setMethod("POST")->setUri($uri)->setBody($jws->getTokenString());
+    public function get(string $resource): Promise {
+        return call(function () use ($resource) {
+            $uri = yield $this->getResourceUri($resource);
 
             try {
                 /** @var Response $response */
-                $response = (yield $this->http->request($request));
-                $this->saveNonce($response);
-                $statusCode = $response->getStatus();
-                if ($statusCode === 400) {
-                    $info = json_decode($response->getBody());
+                $response = yield $this->http->request($uri);
 
-                    if (!empty($info->type) && ($info->type === "urn:acme:badNonce" or $info->type === "urn:acme:error:badNonce")) {
-                        continue;
-                    }
-                } else if ($statusCode === 429) {
-                    /**
-                     * Hit rate limit
-                     * @{link} https://letsencrypt.org/docs/rate-limits/
-                     */
-                    yield new Pause(1000);
-                    continue;
-                }
+                // We just buffer the body here, so no further I/O will happen once this method's promise resolves.
+                yield $response->getBody();
+
+                $this->saveNonce($response);
             } catch (Throwable $e) {
-                throw new AcmeException("POST request to {$uri} failed: " . $e->getMessage(), null, $e);
+                throw new AcmeException("GET request to {$uri} failed: " . $e->getMessage(), null, $e);
             } catch (Exception $e) {
-                throw new AcmeException("POST request to {$uri} failed: " . $e->getMessage(), null, $e);
+                throw new AcmeException("GET request to {$uri} failed: " . $e->getMessage(), null, $e);
             }
 
-            yield new CoroutineResult($response);
-            return;
-        } while (true);
+            return $response;
+        });
+    }
+
+    /**
+     * Retrieves a resource using a POST request.
+     *
+     * @api
+     *
+     * @param string $resource Resource to fetch.
+     * @param array  $payload Payload as associative array to send.
+     *
+     * @return Promise Resolves to the HTTP response.
+     * @throws AcmeException If the request failed.
+     */
+    public function post(string $resource, array $payload): Promise {
+        return call(function () use ($resource, $payload) {
+            $uri = yield $this->getResourceUri($resource);
+
+            $attempt = 0;
+            $statusCode = null;
+
+            do {
+                $attempt++;
+
+                if ($attempt > 3) {
+                    throw new AcmeException("POST request to {$uri} failed, received too many errors (last code: ${statusCode}).");
+                }
+
+                $payload['resource'] = $payload['resource'] ?? $resource;
+
+                $request = (new Request($uri, 'POST'))
+                    ->withBody($this->cryptoBackend->signJwt($this->accountKey, yield $this->getNonce($uri), $payload));
+
+                try {
+                    /** @var Response $response */
+                    $response = yield $this->http->request($request);
+                    $statusCode = $response->getStatus();
+                    $body = yield $response->getBody();
+
+                    $this->saveNonce($response);
+
+                    if ($statusCode === 400) {
+                        $info = json_decode($body);
+
+                        if (!empty($info->type) && ($info->type === 'urn:acme:badNonce' || $info->type === 'urn:acme:error:badNonce')) {
+                            continue;
+                        }
+                    } else if ($statusCode === 429) {
+                        /**
+                         * Hit rate limit
+                         * @{link} https://letsencrypt.org/docs/rate-limits/
+                         */
+                        yield new Delayed(1000);
+                        continue;
+                    }
+                } catch (Throwable $e) {
+                    throw new AcmeException("POST request to {$uri} failed: " . $e->getMessage(), null, $e);
+                } catch (Exception $e) {
+                    throw new AcmeException("POST request to {$uri} failed: " . $e->getMessage(), null, $e);
+                }
+
+                return $response;
+            } while (true);
+        });
     }
 
     /**
      * Saves the nonce if one was provided in the response.
      *
-     * @param Response $response response which may carry a new replay nonce as header
+     * @param Response $response Response which may carry a new replay nonce as header.
      */
     private function saveNonce(Response $response) {
-        if (!$response->hasHeader("replay-nonce")) {
+        if (!$response->hasHeader('replay-nonce')) {
             return;
         }
 
-        list($nonce) = $response->getHeader("replay-nonce");
-        $this->nonces[] = $nonce;
+        $this->nonces[] = $response->getHeader('replay-nonce');
     }
 }

@@ -3,7 +3,7 @@
 /**
  * This file is part of the ACME package.
  *
- * @copyright Copyright (c) 2015-2016, Niklas Keller
+ * @copyright Copyright (c) 2015-2017, Niklas Keller
  * @license MIT
  */
 
@@ -15,49 +15,49 @@ namespace Kelunik\Acme;
  * @author Niklas Keller <me@kelunik.com>
  * @package Kelunik\Acme
  */
-class AcmeResource {
+final class AcmeResource {
     /**
      * New registration.
      */
-    const NEW_REGISTRATION = "new-reg";
+    const NEW_REGISTRATION = 'new-reg';
 
     /**
      * Recover registration.
      */
-    const RECOVER_REGISTRATION = "recover-reg";
+    const RECOVER_REGISTRATION = 'recover-reg';
 
     /**
      * New authorization.
      */
-    const NEW_AUTHORIZATION = "new-authz";
+    const NEW_AUTHORIZATION = 'new-authz';
 
     /**
      * New certificate.
      */
-    const NEW_CERTIFICATE = "new-cert";
+    const NEW_CERTIFICATE = 'new-cert';
 
     /**
      * Revoke certificate.
      */
-    const REVOKE_CERTIFICATE = "revoke-cert";
+    const REVOKE_CERTIFICATE = 'revoke-cert';
 
     /**
      * Registration.
      */
-    const REGISTRATION = "reg";
+    const REGISTRATION = 'reg';
 
     /**
      * Authorization.
      */
-    const AUTHORIZATION = "authz";
+    const AUTHORIZATION = 'authz';
 
     /**
      * Challenge.
      */
-    const CHALLENGE = "challenge";
+    const CHALLENGE = 'challenge';
 
     /**
      * Certificate.
      */
-    const CERTIFICATE = "cert";
+    const CERTIFICATE = 'cert';
 }

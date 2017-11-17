@@ -3,34 +3,35 @@
 /**
  * This file is part of the ACME package.
  *
- * @copyright Copyright (c) 2015-2016, Niklas Keller
+ * @copyright Copyright (c) 2015-2017, Niklas Keller
  * @license MIT
  */
 
 namespace Kelunik\Acme\Verifiers;
 
 use Amp\Artax\Client;
-use Amp\Artax\Cookie\NullCookieJar;
-use Amp\Artax\HttpClient;
+use Amp\Artax\DefaultClient;
 use Amp\Artax\Response;
-use InvalidArgumentException;
+use Amp\Promise;
+use Amp\Socket\ClientTlsContext;
 use Kelunik\Acme\AcmeException;
+use function Amp\call;
 
 /**
  * Verifies HTTP-01 challenges.
  *
  * @package Kelunik\Acme
  */
-class Http01 {
+final class Http01 {
     private $client;
 
     /**
      * Http01 constructor.
      *
-     * @param HttpClient|null $client HTTP client to use, otherwise a default client will be used
+     * @param Client|null $client HTTP client to use, otherwise a default client will be used.
      */
-    public function __construct(HttpClient $client = null) {
-        $this->client = $client ?: new Client(new NullCookieJar);
+    public function __construct(Client $client = null) {
+        $this->client = $client ?? new DefaultClient(null, null, (new ClientTlsContext)->withoutPeerVerification());
     }
 
     /**
@@ -39,52 +40,27 @@ class Http01 {
      * Can be used to verify a challenge before requesting validation from a CA to catch errors early.
      *
      * @api
-     * @param string $domain domain to verify
-     * @param string $token challenge token
-     * @param string $payload expected payload
-     * @return \Amp\Promise resolves to null
+     *
+     * @param string $domain Domain to verify.
+     * @param string $token Challenge token.
+     * @param string $expectedPayload Expected payload.
+     *
+     * @return Promise Resolves successfully if the challenge has been successfully verified, otherwise fails.
      * @throws AcmeException If the challenge could not be verified.
      */
-    public function verifyChallenge($domain, $token, $payload) {
-        return \Amp\resolve($this->doVerifyChallenge($domain, $token, $payload));
-    }
+    public function verifyChallenge(string $domain, string $token, string $expectedPayload): Promise {
+        return call(function () use ($domain, $token, $expectedPayload) {
+            $uri = "http://{$domain}/.well-known/acme-challenge/{$token}";
 
-    /**
-     * Verifies a HTTP-01 challenge.
-     *
-     * Can be used to verify a challenge before requesting validation from a CA to catch errors early.
-     *
-     * @param string $domain domain to verify
-     * @param string $token challenge token
-     * @param string $payload expected payload
-     * @return \Generator coroutine resolved by Amp returning null
-     * @throws AcmeException If the challenge could not be verified.
-     */
-    private function doVerifyChallenge($domain, $token, $payload) {
-        if (!is_string($domain)) {
-            throw new InvalidArgumentException(sprintf("\$domain must be of type string, %s given.", gettype($domain)));
-        }
+            /** @var Response $response */
+            $response = yield $this->client->request($uri);
 
-        if (!is_string($token)) {
-            throw new InvalidArgumentException(sprintf("\$token must be of type string, %s given.", gettype($token)));
-        }
+            /** @var string $body */
+            $body = yield $response->getBody();
 
-        if (!is_string($payload)) {
-            throw new InvalidArgumentException(sprintf("\$payload must be of type string, %s given.", gettype($payload)));
-        }
-
-        $uri = "http://{$domain}/.well-known/acme-challenge/{$token}";
-
-        /** @var Response $response */
-        $response = (yield $this->client->request($uri, [
-            Client::OP_CRYPTO => [
-                "verify_peer" => false,
-                "verify_peer_name" => false,
-            ],
-        ]));
-
-        if (rtrim($payload) !== rtrim($response->getBody())) {
-            throw new AcmeException("selfVerify failed, please check {$uri}.");
-        }
+            if (rtrim($expectedPayload) !== rtrim($body)) {
+                throw new AcmeException("Verification failed, please check the response body for '{$uri}'. It contains '{$body}' but '{$expectedPayload}' was expected.");
+            }
+        });
     }
 }

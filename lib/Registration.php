@@ -3,7 +3,7 @@
 /**
  * This file is part of the ACME package.
  *
- * @copyright Copyright (c) 2015-2016, Niklas Keller
+ * @copyright Copyright (c) 2015-2017, Niklas Keller
  * @license MIT
  */
 
@@ -17,40 +17,40 @@ namespace Kelunik\Acme;
  */
 class Registration {
     /**
-     * @var string URI of the registration object
+     * @var string URI of the registration object.
      */
     private $location;
 
     /**
-     * @var array all contacts registered with the server
+     * @var array All contacts registered with the server.
      */
     private $contact;
 
     /**
-     * @var null|string URI to the agreement, if agreed
+     * @var null|string URI to the agreement, if agreed.
      */
     private $agreement;
 
     /**
-     * @var null|string URI to retrieve authorizations if provided
+     * @var null|string URI to retrieve authorizations if provided.
      */
     private $authorizations;
 
     /**
-     * @var null|string URI to retrieve certificates if provided
+     * @var null|string URI to retrieve certificates if provided.
      */
     private $certificates;
 
     /**
      * Registration constructor.
      *
-     * @param string      $location URI of the registration object
-     * @param array       $contact all contacts registered with the server
-     * @param string|null $agreement URI to the agreement, if agreed
-     * @param string      $authorizations URI to retrieve authorizations
-     * @param string      $certificates URI to retrieve certificates
+     * @param string      $location URI of the registration object.
+     * @param array       $contact All contacts registered with the server.
+     * @param string|null $agreement URI to the agreement, if agreed.
+     * @param string      $authorizations URI to retrieve authorizations.
+     * @param string      $certificates URI to retrieve certificates.
      */
-    public function __construct($location, array $contact = [], $agreement = null, $authorizations = null, $certificates = null) {
+    public function __construct(string $location, array $contact = [], string $agreement = null, string $authorizations = null, string $certificates = null) {
         $this->location = $location;
         $this->contact = $contact;
         $this->agreement = $agreement;
@@ -64,7 +64,7 @@ class Registration {
      * @api
      * @return string URI to retrieve this registration object
      */
-    public function getLocation() {
+    public function getLocation(): string {
         return $this->location;
     }
 
@@ -72,9 +72,9 @@ class Registration {
      * Gets the contact addresses.
      *
      * @api
-     * @return array contacts registered with the server
+     * @return array Contacts registered with the server.
      */
-    public function getContact() {
+    public function getContact(): array {
         return $this->contact;
     }
 
@@ -82,7 +82,7 @@ class Registration {
      * Gets the agreement URI.
      *
      * @api
-     * @return null|string URI to the agreement, if agreed, otherwise <code>null</code>
+     * @return null|string URI to the agreement, if agreed, otherwise `null`.
      */
     public function getAgreement() {
         return $this->agreement;
@@ -92,7 +92,7 @@ class Registration {
      * Gets the authorizations URI.
      *
      * @api
-     * @return null|string URI to retrieve authorizations or null
+     * @return null|string URI to retrieve authorizations or `null`.
      */
     public function getAuthorizations() {
         return $this->authorizations;
@@ -102,7 +102,7 @@ class Registration {
      * Gets the certificates URI.
      *
      * @api
-     * @return null|string URI to retrieve certficates or null
+     * @return null|string URI to retrieve certificates or `null`.
      */
     public function getCertificates() {
         return $this->certificates;

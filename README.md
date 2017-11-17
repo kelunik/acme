@@ -6,7 +6,7 @@
 
 **Required PHP Version**
 
-- PHP 5.5
+- PHP 7.0
 
 **Installation**
 
@@ -20,13 +20,7 @@ This package follows semantic versioning. Although there's no `v1.0.0` yet, it's
 
 The library is fully documented using PHPDoc.
 
-**Implementations**
-
- - [`kelunik/acme-client`](https://github.com/kelunik/acme-client)
- - [`kelunik/aerys-acme`](https://github.com/kelunik/aerys-acme)
- - [`Petertjuh360/da-letsencrypt`](https://github.com/Petertjuh360/da-letsencrypt)
-
 **Usage**
 
 If you're not familiar with promises and `amphp/amp` yet, read my [blog post to get started](http://blog.kelunik.com/2015/09/20/getting-started-with-amp.html).
-You can always use `Amp\wait` to use this async library in synchronious code.
+You can always use `Amp\Promise\wait` to use this async library in synchronous code.

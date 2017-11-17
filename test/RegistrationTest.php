@@ -2,13 +2,16 @@
 
 namespace Kelunik\Acme;
 
-class RegistrationTest extends \PHPUnit_Framework_TestCase {
+use PHPUnit\Framework\TestCase;
+
+class RegistrationTest extends TestCase {
     /**
      * @param string      $location URI of the registration object
      * @param array       $contact all contacts registered with the server
      * @param string|null $agreement URI to the agreement, if agreed
      * @param string      $authorizations URI to retrieve authorizations
      * @param string      $certificates URI to retrieve certificates
+     *
      * @dataProvider provideSuccessArgs
      * @test
      */
@@ -23,15 +26,15 @@ class RegistrationTest extends \PHPUnit_Framework_TestCase {
     }
 
     public function provideSuccessArgs() {
-        $server = "https://acme-v01.api.letsencrypt.org/directory";
+        $server = 'https://acme-v01.api.letsencrypt.org/directory';
 
         return [
             [$server],
             [$server, []],
-            [$server, ["mailto:me@example.com"]],
-            [$server, ["mailto:me@example.com"], null, "{$server}/authz"],
-            [$server, ["mailto:me@example.com"], null, "{$server}/authz", "{$server}/certs"],
-            [$server, ["mailto:me@example.com"], "{$server}/tos", "{$server}/authz", "{$server}/certs"],
+            [$server, ['mailto:me@example.com']],
+            [$server, ['mailto:me@example.com'], null, "{$server}/authz"],
+            [$server, ['mailto:me@example.com'], null, "{$server}/authz", "{$server}/certs"],
+            [$server, ['mailto:me@example.com'], "{$server}/tos", "{$server}/authz", "{$server}/certs"],
         ];
     }
 }
