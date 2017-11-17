@@ -46,8 +46,11 @@ class OpenSSLCSRGenerator implements CSRGenerator {
      */
     public function generate(KeyPair $keyPair, array $domains) {
         if (!$privateKey = openssl_pkey_get_private($keyPair->getPrivate())) {
-            // TODO: Improve error message
-            throw new AcmeException("Couldn't use private key.");
+            throw new AcmeException("OpenSSL considered the private key invalid.");
+        }
+
+        if (empty($domains)) {
+            throw new AcmeException("The list of domain names must not be empty.");
         }
 
         $san = implode(",", array_map(function ($dns) {
@@ -85,10 +88,13 @@ EOL;
         yield \Amp\File\unlink($tempFile);
 
         if (!$csr) {
-            // TODO: Improve error message
-            throw new AcmeException("CSR could not be generated.");
+            throw new AcmeException("A CSR resource could not be generated.");
         }
 
-        yield new CoroutineResult(openssl_csr_export($csr, $csr));
+        if (!openssl_csr_export($csr, $csrString)) {
+            throw new AcmeException("A CSR resource could not be exported as a string.");
+        }
+
+        yield new CoroutineResult($csrString);
     }
 }
