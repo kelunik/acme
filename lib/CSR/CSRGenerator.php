@@ -8,6 +8,7 @@
  */
 
 namespace Kelunik\Acme\CSR;
+
 use Amp\Promise;
 use Kelunik\Acme\KeyPair;
 

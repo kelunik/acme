@@ -35,7 +35,7 @@ class OpenSSLCSRGeneratorTest extends \PHPUnit_Framework_TestCase {
      */
     public function failsWithInvalidKey()
     {
-        \Amp\wait(\Amp\resolve($this->csrGenerator->generate(new KeyPair("foo", "bar"), ["example.com"])));
+        \Amp\wait($this->csrGenerator->generate(new KeyPair("foo", "bar"), ["example.com"]));
     }
 
     /**
@@ -44,7 +44,7 @@ class OpenSSLCSRGeneratorTest extends \PHPUnit_Framework_TestCase {
      */
     public function failsWithNoDomains()
     {
-        \Amp\wait(\Amp\resolve($this->csrGenerator->generate($this->keyGenerator->generate(), [])));
+        \Amp\wait($this->csrGenerator->generate($this->keyGenerator->generate(), []));
     }
 
     /**
@@ -52,7 +52,7 @@ class OpenSSLCSRGeneratorTest extends \PHPUnit_Framework_TestCase {
      */
     public function succeedsOtherwise()
     {
-        $csr = \Amp\wait(\Amp\resolve($this->csrGenerator->generate($this->keyGenerator->generate(), ["example.com"])));
+        $csr = \Amp\wait($this->csrGenerator->generate($this->keyGenerator->generate(), ["example.com"]));
 
         $this->assertInternalType("string", $csr);
     }

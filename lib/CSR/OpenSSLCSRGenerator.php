@@ -3,7 +3,7 @@
 /**
  * This file is part of the ACME package.
  *
- * @copyright Copyright (c) 2015-2016, Niklas Keller
+ * @copyright Copyright (c) 2015-2017, Niklas Keller
  * @license MIT
  */
 
@@ -37,32 +37,27 @@ class OpenSSLCSRGenerator implements CSRGenerator {
         $this->mustStaple = $mustStaple;
     }
 
-    /**
-     * {@inheritdoc}
-     *
-     * @param KeyPair $keyPair domain key pair
-     * @param array $domains list of domain names
-     * @return Promise resolves to a string (PEM encoded CSR)
-     */
+    /** @inheritdoc */
     public function generate(KeyPair $keyPair, array $domains) {
-        if (!$privateKey = openssl_pkey_get_private($keyPair->getPrivate())) {
-            throw new AcmeException("OpenSSL considered the private key invalid.");
-        }
+        return \Amp\resolve(function () use ($keyPair, $domains) {
+            if (!$privateKey = openssl_pkey_get_private($keyPair->getPrivate())) {
+                throw new AcmeException("OpenSSL considered the private key invalid.");
+            }
 
-        if (empty($domains)) {
-            throw new AcmeException("The list of domain names must not be empty.");
-        }
+            if (empty($domains)) {
+                throw new AcmeException("The list of domain names must not be empty.");
+            }
 
-        $san = implode(",", array_map(function ($dns) {
-            return "DNS:{$dns}";
-        }, $domains));
+            $san = implode(",", array_map(function ($dns) {
+                return "DNS:{$dns}";
+            }, $domains));
 
-        // http://www.heise.de/netze/rfc/rfcs/rfc7633.shtml
-        // http://www.heise.de/netze/rfc/rfcs/rfc6066.shtml
-        $mustStaple = $this->mustStaple ? "tlsfeature = status_request" : "";
+            // http://www.heise.de/netze/rfc/rfcs/rfc7633.shtml
+            // http://www.heise.de/netze/rfc/rfcs/rfc6066.shtml
+            $mustStaple = $this->mustStaple ? "tlsfeature = status_request" : "";
 
-        $tempFile = tempnam(sys_get_temp_dir(), "acme-openssl-config-");
-        $tempConf = <<<EOL
+            $tempFile = tempnam(sys_get_temp_dir(), "acme-openssl-config-");
+            $tempConf = <<<EOL
 [ req ]
 distinguished_name = req_distinguished_name
 req_extensions = v3_req
@@ -76,25 +71,26 @@ keyUsage = digitalSignature, nonRepudiation
 subjectAltName = {$san}
 EOL;
 
-        yield \Amp\File\put($tempFile, $tempConf);
+            yield \Amp\File\put($tempFile, $tempConf);
 
-        $csr = openssl_csr_new([
-            "CN" => reset($domains),
-        ], $privateKey, [
-            "digest_alg" => "sha256",
-            "config" => $tempFile,
-        ]);
+            $csr = openssl_csr_new([
+                "CN" => reset($domains),
+            ], $privateKey, [
+                "digest_alg" => "sha256",
+                "config" => $tempFile,
+            ]);
 
-        yield \Amp\File\unlink($tempFile);
+            yield \Amp\File\unlink($tempFile);
 
-        if (!$csr) {
-            throw new AcmeException("A CSR resource could not be generated.");
-        }
+            if (!$csr) {
+                throw new AcmeException("A CSR resource could not be generated.");
+            }
 
-        if (!openssl_csr_export($csr, $csrString)) {
-            throw new AcmeException("A CSR resource could not be exported as a string.");
-        }
+            if (!openssl_csr_export($csr, $csrString)) {
+                throw new AcmeException("A CSR resource could not be exported as a string.");
+            }
 
-        yield new CoroutineResult($csrString);
+            yield new CoroutineResult($csrString);
+        });
     }
 }
