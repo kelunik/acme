@@ -10,7 +10,6 @@
 namespace Kelunik\Acme\CSR;
 
 use Amp\CoroutineResult;
-use Amp\Promise;
 use Kelunik\Acme\AcmeException;
 use Kelunik\Acme\KeyPair;
 
