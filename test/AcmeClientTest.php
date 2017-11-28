@@ -52,8 +52,8 @@ class AcmeClientTest extends TestCase {
     /**
      * @test
      * @depends boulderConfigured
-     * @expectedException \InvalidArgumentException
-     * @expectedExceptionMessage resource must be of the type string
+     * @expectedException \TypeError
+     * @expectedExceptionMessage must be of the type string
      */
     public function failsIfPostResourceIsEmpty() {
         $client = new AcmeClient(getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey());
@@ -82,7 +82,7 @@ class AcmeClientTest extends TestCase {
         $response = Promise\wait($client->get(getenv('BOULDER_HOST') . '/directory'));
         $this->assertSame(200, $response->getStatus());
 
-        $data = json_decode($response->getBody(), true);
+        $data = json_decode(yield $response->getBody(), true);
 
         $this->assertInternalType('array', $data);
         $this->assertArrayHasKey('new-authz', $data);
@@ -99,6 +99,7 @@ class AcmeClientTest extends TestCase {
         $client = new AcmeClient(getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey());
 
         Promise\wait($client->post(getenv('BOULDER_HOST') . '/acme/new-reg', []));
+        $this->addToAssertionCount(1);
     }
 
     /**
@@ -146,8 +147,8 @@ class AcmeClientTest extends TestCase {
     /**
      * @test
      * @depends boulderConfigured
-     * @expectedException \InvalidArgumentException
-     * @expectedExceptionMessage resource must be of the type string
+     * @expectedException \TypeError
+     * @expectedExceptionMessage must be of the type string
      */
     public function failsWithGetNotString() {
         $client = new AcmeClient(getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey());
@@ -164,6 +165,7 @@ class AcmeClientTest extends TestCase {
     public function failsWithInvalidDirectoryResponse() {
         $response = $this->getMockBuilder(Response::class)->getMock();
         $response->method('getStatus')->willReturn(400);
+        $response->method('getBody')->willReturn(new Message(new InMemoryStream('')));
 
         $http = $this->getMockBuilder(Client::class)->getMock();
         $http->method('request')->willReturn(new Success($response));
@@ -209,9 +211,13 @@ class AcmeClientTest extends TestCase {
         ]))));
 
         $http = $this->getMockBuilder(Client::class)->getMock();
-        $http->method('request')->willReturnCallback(function (Request $request) use ($http, $mockResponse) {
+        $http->method('request')->willReturnCallback(function ($request) use ($mockResponse) {
+            if (!$request instanceof Request) {
+                $request = new Request($request);
+            }
+
             if ($request->getMethod() === 'POST') {
-                return $mockResponse;
+                return new Success($mockResponse);
             }
 
             return (new DefaultClient)->request($request);
@@ -236,11 +242,15 @@ class AcmeClientTest extends TestCase {
         ]))));
 
         $http = $this->getMockBuilder(Client::class)->getMock();
-        $http->method('request')->willReturnCallback(coroutine(function (Request $request) use ($http, $mockResponse, &$encounteredBadNonceError) {
+        $http->method('request')->willReturnCallback(coroutine(function ($request) use ($http, $mockResponse, &$encounteredBadNonceError) {
+            if (!$request instanceof Request) {
+                $request = new Request($request);
+            }
+
             if (!$encounteredBadNonceError && $request->getMethod() === 'POST') {
                 $encounteredBadNonceError = true;
 
-                return $mockResponse;
+                return new Success($mockResponse);
             }
 
             return (new DefaultClient)->request($request);
