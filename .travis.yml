@@ -22,14 +22,13 @@ before_install:
   - ./test/.run-boulder.sh
 
 install:
-  - phpenv config-rm xdebug.ini || true
   - composer install
   - composer require satooshi/php-coveralls dev-master --dev
   - composer show --installed
 
 script:
   - find -name "*.php" -not -path "./vendor/*" -print0 | xargs -n 1 -0 php -l
-  - phpdbg -qrr vendor/bin/phpunit --coverage-text --coverage-clover build/logs/clover.xml
+  - vendor/bin/phpunit --coverage-text --coverage-clover build/logs/clover.xml
 
 after_script:
   - php vendor/bin/coveralls -v
