@@ -3,6 +3,7 @@
 namespace Kelunik\Acme;
 
 use Amp\Artax\Client;
+use Amp\Artax\DefaultClient;
 use Amp\Artax\Request;
 use Amp\Artax\Response;
 use Amp\ByteStream\InMemoryStream;
@@ -208,17 +209,13 @@ class AcmeClientTest extends TestCase {
         ]))));
 
         $http = $this->getMockBuilder(Client::class)->getMock();
-        $http->method('request')->willReturnCallback(coroutine(function ($request) use ($http, $mockResponse) {
-            /** @var Client $http */
-            /** @var Response $response */
-            $response = yield $http->request($request);
-
-            if ($response->getRequest()->getMethod() === 'POST') {
+        $http->method('request')->willReturnCallback(function (Request $request) use ($http, $mockResponse) {
+            if ($request->getMethod() === 'POST') {
                 return $mockResponse;
             }
 
-            return $response;
-        }));
+            return (new DefaultClient)->request($request);
+        });
 
         $client = new AcmeClient(getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey(), $http);
 
@@ -239,18 +236,14 @@ class AcmeClientTest extends TestCase {
         ]))));
 
         $http = $this->getMockBuilder(Client::class)->getMock();
-        $http->method('request')->willReturnCallback(coroutine(function ($request) use ($http, $mockResponse, &$encounteredBadNonceError) {
-            /** @var Client $http */
-            /** @var Response $response */
-            $response = yield $http->request($request);
-
-            if (!$encounteredBadNonceError && $request instanceof Request && $request->getMethod() === 'POST') {
+        $http->method('request')->willReturnCallback(coroutine(function (Request $request) use ($http, $mockResponse, &$encounteredBadNonceError) {
+            if (!$encounteredBadNonceError && $request->getMethod() === 'POST') {
                 $encounteredBadNonceError = true;
 
                 return $mockResponse;
             }
 
-            return $response;
+            return (new DefaultClient)->request($request);
         }));
 
         $client = new AcmeClient(getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey(), $http);
