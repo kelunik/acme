@@ -231,7 +231,19 @@ class AcmeService {
                 }
 
                 if ($data->status === 'invalid') {
-                    throw new AcmeException('Challenge marked as invalid!');
+                    $errors = [];
+
+                    foreach ($data->errors ?? [] as $error) {
+                        $message = $error->title ?? '???';
+
+                        if ($error->detail ?? '') {
+                            $message .= ' (' . $error->detail . ')';
+                        }
+
+                        $errors[] = $message;
+                    }
+
+                    throw new AcmeException('Challenge marked as invalid: ' . ($errors ? \implode(', ', $errors) : 'Unknown error'));
                 }
 
                 if ($data->status === 'valid') {
