@@ -22,6 +22,8 @@ use Exception;
 use Kelunik\Acme\Crypto\Backend\Backend;
 use Kelunik\Acme\Crypto\Backend\OpensslBackend;
 use Kelunik\Acme\Crypto\PrivateKey;
+use Psr\Log\LoggerInterface as PsrLogger;
+use Psr\Log\NullLogger;
 use Throwable;
 use function Amp\call;
 
@@ -63,22 +65,29 @@ final class AcmeClient {
     private $nonces;
 
     /**
+     * @var PsrLogger Logger for debug information.
+     */
+    private $logger;
+
+    /**
      * AcmeClient constructor.
      *
      * @api
      *
-     * @param string       $directoryUri URI to the ACME server directory.
-     * @param PrivateKey   $accountKey Account key.
-     * @param Client|null  $http Custom HTTP client, a default client will be used if no value is provided.
-     * @param Backend|null $cryptoBackend Custom crypto backend, a default OpensslBackend will be used if no value is
-     *     provided.
+     * @param string         $directoryUri URI to the ACME server directory.
+     * @param PrivateKey     $accountKey Account key.
+     * @param Client|null    $http Custom HTTP client, a default client will be used if no value is provided.
+     * @param Backend|null   $cryptoBackend Custom crypto backend, a default OpensslBackend will be used if no value is
+     *                                      provided.
+     * @param PsrLogger|null $logger Logger for debug information.
      */
-    public function __construct(string $directoryUri, PrivateKey $accountKey, Client $http = null, Backend $cryptoBackend = null) {
+    public function __construct(string $directoryUri, PrivateKey $accountKey, Client $http = null, Backend $cryptoBackend = null, PsrLogger $logger = null) {
         $this->directoryUri = $directoryUri;
         $this->accountKey = $accountKey;
         $this->http = $http ?? $this->buildClient();
         $this->cryptoBackend = $cryptoBackend ?? new OpensslBackend;
         $this->nonces = [];
+        $this->logger = $logger ?? new NullLogger;
     }
 
     /**
@@ -176,6 +185,10 @@ final class AcmeClient {
     private function fetchDirectory(): Promise {
         return call(function () {
             try {
+                $this->logger->debug('Fetching directory from {uri}', [
+                    'uri' => $this->directoryUri
+                ]);
+
                 /** @var Response $response */
                 $response = yield $this->http->request($this->directoryUri);
                 $directory = json_decode(yield $response->getBody(), true);
@@ -216,12 +229,22 @@ final class AcmeClient {
         return call(function () use ($resource) {
             $uri = yield $this->getResourceUri($resource);
 
+            $this->logger->debug('Requesting {uri} via GET', [
+                'uri' => $uri,
+            ]);
+
             try {
                 /** @var Response $response */
                 $response = yield $this->http->request($uri);
 
                 // We just buffer the body here, so no further I/O will happen once this method's promise resolves.
-                yield $response->getBody();
+                $body = yield $response->getBody();
+
+                $this->logger->debug('Request for {uri} via GET has been processed with status {status}: {body}', [
+                    'uri' => $uri,
+                    'status' => $response->getStatus(),
+                    'body' => $body
+                ]);
 
                 $this->saveNonce($response);
             } catch (Throwable $e) {
@@ -261,14 +284,26 @@ final class AcmeClient {
 
                 $payload['resource'] = $payload['resource'] ?? $resource;
 
+                $requestBody = $this->cryptoBackend->signJwt($this->accountKey, yield $this->getNonce($uri), $payload);
                 $request = (new Request($uri, 'POST'))
-                    ->withBody($this->cryptoBackend->signJwt($this->accountKey, yield $this->getNonce($uri), $payload));
+                    ->withBody($requestBody);
+
+                $this->logger->debug('Requesting {uri} via POST: {body}', [
+                    'uri' => $uri,
+                    'body' => $requestBody,
+                ]);
 
                 try {
                     /** @var Response $response */
                     $response = yield $this->http->request($request);
                     $statusCode = $response->getStatus();
                     $body = yield $response->getBody();
+
+                    $this->logger->debug('Request for {uri} via POST has been processed with status {status}: {body}', [
+                        'uri' => $uri,
+                        'status' => $statusCode,
+                        'body' => $body
+                    ]);
 
                     $this->saveNonce($response);
 

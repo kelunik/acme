@@ -212,7 +212,8 @@ class AcmeService {
             do {
                 /** @var Response $response */
                 $response = yield $this->acmeClient->get($location);
-                $data = json_decode(yield $response->getBody());
+                $body = yield $response->getBody();
+                $data = json_decode($body);
 
                 if ($data->status === 'pending') {
                     if (!$response->hasHeader('retry-after')) {
@@ -243,7 +244,7 @@ class AcmeService {
                         $errors[] = $message;
                     }
 
-                    throw new AcmeException('Challenge marked as invalid: ' . ($errors ? \implode(', ', $errors) : 'Unknown error'));
+                    throw new AcmeException('Challenge marked as invalid: ' . ($errors ? \implode(', ', $errors) : ('Unknown error: ' . $body)));
                 }
 
                 if ($data->status === 'valid') {
