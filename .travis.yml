@@ -23,7 +23,6 @@ before_install:
 
 install:
   - composer install
-  - composer require satooshi/php-coveralls dev-master --dev
   - composer show --installed
 
 script:
@@ -31,4 +30,6 @@ script:
   - vendor/bin/phpunit --coverage-text --coverage-clover build/logs/clover.xml
 
 after_script:
-  - php vendor/bin/coveralls -v
+  - curl -OL https://github.com/php-coveralls/php-coveralls/releases/download/v1.0.0/coveralls.phar
+  - chmod +x coveralls.phar
+  - ./coveralls.phar -v
