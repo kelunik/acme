@@ -311,6 +311,7 @@ final class AcmeClient {
                         $info = json_decode($body);
 
                         if (!empty($info->type) && ($info->type === 'urn:acme:badNonce' || $info->type === 'urn:acme:error:badNonce')) {
+                            $this->nonces = [];
                             continue;
                         }
                     } else if ($statusCode === 429) {
