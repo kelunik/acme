@@ -24,7 +24,7 @@ use Namshi\JOSE\Base64\Base64UrlSafeEncoder;
  * @param Backend    $cryptoBackend Crypto backend.
  *
  * @return string Key authorization.
- * @see https://github.com/ietf-wg-acme/acme/blob/master/draft-ietf-acme-acme.md#key-authorizations
+ * @see https://tools.ietf.org/html/rfc8555#section-8.4
  */
 function generateKeyAuthorization(PrivateKey $accountKey, string $token, Backend $cryptoBackend): string {
     static $encoder;

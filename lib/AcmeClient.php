@@ -50,6 +50,11 @@ final class AcmeClient {
     private $accountKey;
 
     /**
+     * @var string Account location URI
+     */
+    private $accountLocation;
+
+    /**
      * @var string Directory URI of the ACME server.
      */
     private $directoryUri;
@@ -72,18 +77,21 @@ final class AcmeClient {
     /**
      * AcmeClient constructor.
      *
-     * @api
-     *
-     * @param string         $directoryUri URI to the ACME server directory.
-     * @param PrivateKey     $accountKey Account key.
-     * @param Client|null    $http Custom HTTP client, a default client will be used if no value is provided.
-     * @param Backend|null   $cryptoBackend Custom crypto backend, a default OpensslBackend will be used if no value is
+     * @param string $directoryUri URI to the ACME server directory.
+     * @param string $accountLocation
+     * @param PrivateKey $accountKey Account key.
+     * @param Client|null $http Custom HTTP client, a default client will be used if no value is provided.
+     * @param Backend|null $cryptoBackend Custom crypto backend, a default OpensslBackend will be used if no value is
      *                                      provided.
      * @param PsrLogger|null $logger Logger for debug information.
+     * @api
+     *
      */
-    public function __construct(string $directoryUri, PrivateKey $accountKey, Client $http = null, Backend $cryptoBackend = null, PsrLogger $logger = null) {
+    public function __construct(string $directoryUri, PrivateKey $accountKey, string $accountLocation = null,
+                                Client $http = null, Backend $cryptoBackend = null, PsrLogger $logger = null) {
         $this->directoryUri = $directoryUri;
         $this->accountKey = $accountKey;
+        $this->accountLocation = $accountLocation;
         $this->http = $http ?? $this->buildClient();
         $this->cryptoBackend = $cryptoBackend ?? new OpensslBackend;
         $this->nonces = [];
@@ -99,6 +107,7 @@ final class AcmeClient {
         $client = new DefaultClient;
         $client->setOption(Client::OP_DEFAULT_HEADERS, [
             'user-agent' => 'kelunik/acme',
+            'Content-type' => 'application/jose+json'
         ]);
 
         return $client;
@@ -107,13 +116,11 @@ final class AcmeClient {
     /**
      * Pops a locally stored nonce or requests a new one for usage.
      *
-     * @param string $uri URI to issue the HEAD request against if no nonce is stored locally.
-     *
      * @return Promise Resolves to a valid nonce.
      */
-    private function getNonce(string $uri): Promise {
+    private function getNonce(): Promise {
         if (empty($this->nonces)) {
-            return $this->requestNonce($uri);
+            return $this->requestNonce();
         }
 
         return new Success(array_shift($this->nonces));
@@ -122,13 +129,13 @@ final class AcmeClient {
     /**
      * Requests a new request nonce from the server.
      *
-     * @param string $uri URI to issue the HEAD request against.
      *
      * @return Promise Resolves to a valid nonce.
      */
-    private function requestNonce(string $uri): Promise {
-        return call(function () use ($uri) {
-            $request = new Request($uri, 'HEAD');
+    private function requestNonce(): Promise {
+        return call(function () {
+            $url = yield $this->getResourceUri(AcmeResource::NEW_NONCE);
+            $request = new Request($url, 'HEAD');
 
             try {
                 /** @var Response $response */
@@ -142,7 +149,7 @@ final class AcmeClient {
 
                 return $response->getHeader('replay-nonce');
             } catch (HttpException $e) {
-                throw new AcmeException("HEAD request to {$uri} failed, could not obtain a replay nonce: " . $e->getMessage(), null, $e);
+                throw new AcmeException("HEAD request to {$url} failed, could not obtain a replay nonce: " . $e->getMessage(), null, $e);
             }
         });
     }
@@ -185,8 +192,8 @@ final class AcmeClient {
     private function fetchDirectory(): Promise {
         return call(function () {
             try {
-                $this->logger->debug('Fetching directory from {uri}', [
-                    'uri' => $this->directoryUri
+                $this->logger->debug('Fetching directory from {url}', [
+                    'url' => $this->directoryUri
                 ]);
 
                 /** @var Response $response */
@@ -227,30 +234,31 @@ final class AcmeClient {
      */
     public function get(string $resource): Promise {
         return call(function () use ($resource) {
-            $uri = yield $this->getResourceUri($resource);
+            $url = yield $this->getResourceUri($resource);
 
-            $this->logger->debug('Requesting {uri} via GET', [
-                'uri' => $uri,
+            $this->logger->debug('Requesting {url} via GET', [
+                'url' => $url,
             ]);
 
             try {
                 /** @var Response $response */
-                $response = yield $this->http->request($uri);
+                $this->http = $this->buildClient($resource);
+                $response = yield $this->http->request($url);
 
                 // We just buffer the body here, so no further I/O will happen once this method's promise resolves.
                 $body = yield $response->getBody();
 
-                $this->logger->debug('Request for {uri} via GET has been processed with status {status}: {body}', [
-                    'uri' => $uri,
+                $this->logger->debug('Request for {url} via GET has been processed with status {status}: {body}', [
+                    'url' => $url,
                     'status' => $response->getStatus(),
                     'body' => $body
                 ]);
 
                 $this->saveNonce($response);
             } catch (Throwable $e) {
-                throw new AcmeException("GET request to {$uri} failed: " . $e->getMessage(), null, $e);
+                throw new AcmeException("GET request to {$url} failed: " . $e->getMessage(), null, $e);
             } catch (Exception $e) {
-                throw new AcmeException("GET request to {$uri} failed: " . $e->getMessage(), null, $e);
+                throw new AcmeException("GET request to {$url} failed: " . $e->getMessage(), null, $e);
             }
 
             return $response;
@@ -270,7 +278,7 @@ final class AcmeClient {
      */
     public function post(string $resource, array $payload): Promise {
         return call(function () use ($resource, $payload) {
-            $uri = yield $this->getResourceUri($resource);
+            $url = yield $this->getResourceUri($resource);
 
             $attempt = 0;
             $statusCode = null;
@@ -279,17 +287,18 @@ final class AcmeClient {
                 $attempt++;
 
                 if ($attempt > 3) {
-                    throw new AcmeException("POST request to {$uri} failed, received too many errors (last code: ${statusCode}).");
+                    throw new AcmeException("POST request to {$url} failed, received too many errors (last code: ${statusCode}).");
                 }
 
-                $payload['resource'] = $payload['resource'] ?? $resource;
+                $payload['url'] = $payload['url'] ?? $url;
 
-                $requestBody = $this->cryptoBackend->signJwt($this->accountKey, yield $this->getNonce($uri), $payload);
-                $request = (new Request($uri, 'POST'))
+                $accountLocation = AcmeResource::requiresAuthorization($resource) ? null : $this->accountLocation;
+                $requestBody = $this->cryptoBackend->signJwt($this->accountKey, yield $this->getNonce(), $payload, $accountLocation);
+                $request = (new Request($url, 'POST'))
                     ->withBody($requestBody);
 
-                $this->logger->debug('Requesting {uri} via POST: {body}', [
-                    'uri' => $uri,
+                $this->logger->debug('Requesting {url} via POST: {body}', [
+                    'url' => $url,
                     'body' => $requestBody,
                 ]);
 
@@ -299,8 +308,8 @@ final class AcmeClient {
                     $statusCode = $response->getStatus();
                     $body = yield $response->getBody();
 
-                    $this->logger->debug('Request for {uri} via POST has been processed with status {status}: {body}', [
-                        'uri' => $uri,
+                    $this->logger->debug('Request for {url} via POST has been processed with status {status}: {body}', [
+                        'url' => $url,
                         'status' => $statusCode,
                         'body' => $body
                     ]);
@@ -310,7 +319,7 @@ final class AcmeClient {
                     if ($statusCode === 400) {
                         $info = json_decode($body);
 
-                        if (!empty($info->type) && ($info->type === 'urn:acme:badNonce' || $info->type === 'urn:acme:error:badNonce')) {
+                        if (!empty($info->type) && (strpos($info->type, "acme:error:badNonce") !== false)) {
                             $this->nonces = [];
                             continue;
                         }
@@ -323,9 +332,9 @@ final class AcmeClient {
                         continue;
                     }
                 } catch (Throwable $e) {
-                    throw new AcmeException("POST request to {$uri} failed: " . $e->getMessage(), null, $e);
+                    throw new AcmeException("POST request to {$url} failed: " . $e->getMessage(), null, $e);
                 } catch (Exception $e) {
-                    throw new AcmeException("POST request to {$uri} failed: " . $e->getMessage(), null, $e);
+                    throw new AcmeException("POST request to {$url} failed: " . $e->getMessage(), null, $e);
                 }
 
                 return $response;

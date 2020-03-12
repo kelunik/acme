@@ -17,47 +17,36 @@ namespace Kelunik\Acme;
  */
 final class AcmeResource {
     /**
-     * New registration.
+     * New order
      */
-    const NEW_REGISTRATION = 'new-reg';
+    const NEW_ORDER = 'newOrder';
 
     /**
-     * Recover registration.
+     * New account
      */
-    const RECOVER_REGISTRATION = 'recover-reg';
+    const NEW_ACCOUNT = 'newAccount';
 
     /**
-     * New authorization.
+     * New nonce
      */
-    const NEW_AUTHORIZATION = 'new-authz';
-
-    /**
-     * New certificate.
-     */
-    const NEW_CERTIFICATE = 'new-cert';
+    const NEW_NONCE = 'newNonce';
 
     /**
      * Revoke certificate.
      */
-    const REVOKE_CERTIFICATE = 'revoke-cert';
+    const REVOKE_CERTIFICATE = 'revokeCert';
 
     /**
-     * Registration.
+     * Key change
      */
-    const REGISTRATION = 'reg';
+    const KEY_CHANGE = 'keyChange';
 
     /**
-     * Authorization.
+     * New authorization.
      */
-    const AUTHORIZATION = 'authz';
+    const NEW_AUTHORIZATION = 'newAuthz';
 
-    /**
-     * Challenge.
-     */
-    const CHALLENGE = 'challenge';
-
-    /**
-     * Certificate.
-     */
-    const CERTIFICATE = 'cert';
+    public static function requiresAuthorization(string $resource): bool {
+        return in_array($resource, [self::NEW_ACCOUNT, self::REVOKE_CERTIFICATE]);
+    }
 }
