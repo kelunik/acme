@@ -292,7 +292,7 @@ final class AcmeClient {
 
                 $payload['url'] = $payload['url'] ?? $url;
 
-                $accountLocation = AcmeResource::requiresAuthorization($resource) ? null : $this->accountLocation;
+                $accountLocation = AcmeResource::requiresJwkAuthorization($resource) ? null : $this->accountLocation;
                 $requestBody = $this->cryptoBackend->signJwt($this->accountKey, yield $this->getNonce(), $payload, $accountLocation);
                 $request = (new Request($url, 'POST'))
                     ->withBody($requestBody);

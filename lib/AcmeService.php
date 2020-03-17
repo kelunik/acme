@@ -12,6 +12,7 @@ namespace Kelunik\Acme;
 use Amp\Artax\Response;
 use Amp\Delayed;
 use Amp\Promise;
+use Cake\Utility\Crypto\OpenSsl;
 use InvalidArgumentException;
 use Kelunik\Acme\Domain\Authorization;
 use Kelunik\Acme\Domain\Challenge;
@@ -113,16 +114,16 @@ class AcmeService {
     }
 
     /**
-     * Requests challenges (submit a new order) for the given DNS names
+     * Submit a new order for the given DNS names
      *
      * @api
      *
-     * @param string[] $dns DNS names to request challenges for
+     * @param string[] $dns DNS names to request order for
      *
      * @return Promise resolves to an Order object
      * @throws AcmeException If something went wrong.
      */
-    public function requestChallenges(array $dns): Promise {
+    public function newOrder(array $dns): Promise {
         return call(function () use ($dns) {
             /** @var Response $response */
 
@@ -248,17 +249,17 @@ class AcmeService {
     }
 
     /**
-     * Requests a new certificate.
-     *
-     * @api
-     *
-     * @param string $csr certificate signing request
+     * Requests a new certificate. This will be done with the finalize URL which is created upon order creation.
      *
      * @return Promise resolves to the URI where the certificate will be provided
-     * @throws AcmeException If something went wrong.
+     * @param string $csr certificate signing request
+     *
+     * @param string $location
+     * @api
+     *
      */
-    public function requestCertificate(string $csr): Promise {
-        return call(function () use ($csr) {
+    public function requestCertificate(string $location, string $csr): Promise {
+        return call(function () use ($location, $csr) {
             $begin = 'REQUEST-----';
             $end = '----END';
 
@@ -281,11 +282,11 @@ class AcmeService {
             $enc = new Base64UrlSafeEncoder;
 
             /** @var Response $response */
-            $response = yield $this->acmeClient->post(AcmeResource::NEW_CERTIFICATE, [
+            $response = yield $this->acmeClient->post($location, [
                 'csr' => $enc->encode(base64_decode($csr)),
             ]);
 
-            if ($response->getStatus() === 201) {
+            if (in_array($response->getStatus(), [200,201])) {
                 if (!$response->hasHeader('location')) {
                     throw new AcmeException('Protocol Violation: No Location Header');
                 }
@@ -311,7 +312,7 @@ class AcmeService {
         return call(function () use ($location) {
             do {
                 /** @var Response $response */
-                $response = yield $this->acmeClient->get($location);
+                $response = yield $this->acmeClient->post($location, []);
 
                 if ($response->getStatus() === 202) {
                     if (!$response->hasHeader('retry-after')) {
@@ -325,27 +326,32 @@ class AcmeService {
                     $waitTime = min(max($waitTime, 2), 60);
 
                     yield new Delayed($waitTime * 1000);
-
                     continue;
                 }
 
                 if ($response->getStatus() === 200) {
-                    $pem = chunk_split(base64_encode(yield $response->getBody()), 64, "\n");
-                    $pem = "-----BEGIN CERTIFICATE-----\n" . $pem . "-----END CERTIFICATE-----\n";
+                    // When polling succeeds, "download" the cert using the certificate location in the response.
+                    $body = yield $response->getBody();
+                    $data = json_decode($body);
+                    $response = yield $this->acmeClient->post($data->certificate, []);
 
                     $certificates = [
-                        $pem,
+                        yield $response->getBody(),
                     ];
 
                     // prevent potential infinite loop
                     $maximumChainLength = 5;
-
+                    
                     while ($response->hasHeader('link')) {
+                        $links = $response->getHeaderArray('link');
+                        $hasOnlyIndexLink = count($links) === 1 ? preg_match('#<(.*?)>;rel="index"#x', $links[0], $match) : 0;
+                        if($hasOnlyIndexLink > 0) {
+                            break;
+                        }
+                        
                         if (!$maximumChainLength--) {
                             throw new AcmeException('Too long certificate chain');
                         }
-
-                        $links = $response->getHeaderArray('link');
 
                         foreach ($links as $link) {
                             if (preg_match('#<(.*?)>;rel="up"#x', $link, $match)) {
@@ -380,7 +386,7 @@ class AcmeService {
     public function revokeCertificate(string $pem): Promise {
         return call(function () use ($pem) {
             $begin = 'CERTIFICATE-----';
-            $end = '----END';
+            $end = '-----END';
 
             $pem = substr($pem, strpos($pem, $begin) + strlen($begin));
             $pem = substr($pem, 0, strpos($pem, $end));
