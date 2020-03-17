@@ -12,7 +12,6 @@ namespace Kelunik\Acme;
 use Amp\Artax\Response;
 use Amp\Delayed;
 use Amp\Promise;
-use Cake\Utility\Crypto\OpenSsl;
 use InvalidArgumentException;
 use Kelunik\Acme\Domain\Authorization;
 use Kelunik\Acme\Domain\Challenge;
