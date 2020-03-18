@@ -14,7 +14,6 @@ use Kelunik\Acme\AcmeException;
 /**
  * ACME Order object.
  *
- * @author Niklas Keller <me@kelunik.com>
  * @package Kelunik\Acme
  */
 class Order {
@@ -98,8 +97,7 @@ class Order {
             $identifiers[] = Identifier::fromResponse($identifier);
         }
         return new Order($payload->status, $identifiers, $payload->authorizations, $payload->finalize,
-            $payload->expires ?? null, $payload->certificate ?? null,
-            $payload->notBefore ?? null, $payload->notAfter ?? null);
+            $payload->expires, $payload->certificate, $payload->notBefore, $payload->notAfter);
     }
 
     public function getStatus(): string {

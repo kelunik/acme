@@ -47,6 +47,6 @@ final class AcmeResource {
     const NEW_AUTHORIZATION = 'newAuthz';
 
     public static function requiresJwkAuthorization(string $resource): bool {
-        return in_array($resource, [self::NEW_ACCOUNT]);
+        return $resource === self::NEW_ACCOUNT;
     }
 }

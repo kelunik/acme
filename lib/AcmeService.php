@@ -46,17 +46,18 @@ class AcmeService {
     /**
      * Registers a new account on the server.
      *
+     * @return Promise resolves to a Registration object
+     * @param bool $agreement
+     * @param string $email e-mail address for contact
+     * @throws AcmeException If something went wrong.
+     *
      * @api
      *
-     * @param string      $email e-mail address for contact
-     *
-     * @return Promise resolves to a Registration object
-     * @throws AcmeException If something went wrong.
      */
-    public function register($email): Promise {
-        return call(function () use ($email) {
+    public function register($email, bool $agreement = false): Promise {
+        return call(function () use ($email, $agreement) {
             $payload = [
-                'termsOfServiceAgreed' => true,
+                'termsOfServiceAgreed' => $agreement,
                 'contact' => [
                     "mailto:{$email}"
                 ]
@@ -84,8 +85,7 @@ class AcmeService {
                         }
                     }
                 }
-                $contact = $payload->contact ?? [];
-                return new Registration($location, $payload->status, $contact, $payload->orders ?? null);
+                return new Registration($location, $payload->status, $payload->contact, $payload->orders);
             }
 
             if ($response->getStatus() === 409) {
@@ -95,7 +95,7 @@ class AcmeService {
                 $location = $response->getHeader('location');
 
                 $payload = [
-                    'termsOfServiceAgreed' => true,
+                    'termsOfServiceAgreed' => $agreement,
                     'contact' => [
                         "mailto:{$email}"
                     ]
@@ -104,8 +104,7 @@ class AcmeService {
                 $response = yield $this->acmeClient->post($location, $payload);
                 $payload = json_decode(yield $response->getBody());
 
-                $contact = $payload->contact ?? [];
-                return new Registration($location, $payload->status, $contact, $payload->orders ?? null);
+                return new Registration($location, $payload->status, $payload->contact, $payload->orders);
             }
 
             throw $this->generateException($response, yield $response->getBody());
@@ -135,13 +134,9 @@ class AcmeService {
             ]);
 
             if (in_array($response->getStatus(), [200, 201])) {
-                if (!$response->hasHeader('location')) {
-                    throw new AcmeException("Protocol violation: Response didn't carry any location header.");
-                }
                 $payload = json_decode(yield $response->getBody());
                 return Order::fromResponse($payload);
             }
-
             throw $this->generateException($response, yield $response->getBody());
         });
     }
@@ -174,19 +169,22 @@ class AcmeService {
     }
 
     /**
-     * Gets the challenge given a challenge-URL
+     * Gets the authorization given a challenge-URL
      *
      * @return \Amp\Promise
      * @param string $location
      */
-    public function getChallenge(string $location): Promise {
+    public function getAuthorization(string $location): Promise {
         return call(function () use($location) {
             /** @var Response $response */
             $response = yield $this->acmeClient->post($location, []);
-            $body = yield $response->getBody();
-            $data = json_decode($body);
 
-            return Authorization::fromResponse($data);
+            try {
+                $data = json_decode(yield $response->getBody());
+                return Authorization::fromResponse($data);
+            } catch (\Throwable $_) {
+                throw $this->generateException($response, yield $response->getBody());
+            }
         });
     }
 
@@ -203,6 +201,7 @@ class AcmeService {
     public function pollForChallenge(string $location): Promise {
         return call(function () use ($location) {
             do {
+                /** @var Response $response */
                 $response = yield $this->acmeClient->post($location, []);
                 $body = yield $response->getBody();
                 $data = json_decode($body);
@@ -257,7 +256,7 @@ class AcmeService {
      * @api
      *
      */
-    public function requestCertificate(string $location, string $csr): Promise {
+    public function finalizeOrder(string $location, string $csr): Promise {
         return call(function () use ($location, $csr) {
             $begin = 'REQUEST-----';
             $end = '----END';
@@ -285,12 +284,9 @@ class AcmeService {
                 'csr' => $enc->encode(base64_decode($csr)),
             ]);
 
-            if (in_array($response->getStatus(), [200,201])) {
-                if (!$response->hasHeader('location')) {
-                    throw new AcmeException('Protocol Violation: No Location Header');
-                }
-
-                return $response->getHeader('location');
+            if ($response->getStatus() === 200) {
+                $payload = json_decode(yield $response->getBody());
+                return Order::fromResponse($payload);
             }
 
             throw $this->generateException($response, yield $response->getBody());
@@ -329,11 +325,6 @@ class AcmeService {
                 }
 
                 if ($response->getStatus() === 200) {
-                    // When polling succeeds, "download" the cert using the certificate location in the response.
-                    $body = yield $response->getBody();
-                    $data = json_decode($body);
-                    $response = yield $this->acmeClient->post($data->certificate, []);
-
                     $certificates = [
                         yield $response->getBody(),
                     ];
@@ -354,12 +345,9 @@ class AcmeService {
 
                         foreach ($links as $link) {
                             if (preg_match('#<(.*?)>;rel="up"#x', $link, $match)) {
-                                $uri = \Sabre\Uri\resolve($response->getRequest()->getUri(), $match[1]);
-                                $response = yield $this->acmeClient->get($uri);
-
-                                $pem = chunk_split(base64_encode(yield $response->getBody()), 64, "\n");
-                                $pem = "-----BEGIN CERTIFICATE-----\n" . $pem . "-----END CERTIFICATE-----\n";
-                                $certificates[] = $pem;
+                                $url = \Sabre\Uri\resolve($response->getRequest()->getUri(), $match[1]);
+                                $response = yield $this->acmeClient->post($url, []);
+                                $certificates[] = yield $response->getBody();
                             }
                         }
                     }

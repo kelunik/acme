@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 
-docker pull acmephp/testing-ca:1.0.0
-docker run -d --name boulder --net host acmephp/testing-ca:1.0.0
+docker pull letsencrypt/pebble
+docker run -d -p 15000:15000 -p 14000:14000 --name boulder letsencrypt/pebble

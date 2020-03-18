@@ -134,7 +134,7 @@ final class AcmeClient {
      */
     private function requestNonce(): Promise {
         return call(function () {
-            $url = yield $this->getResourceUri(AcmeResource::NEW_NONCE);
+            $url = yield $this->getResourceUrl(AcmeResource::NEW_NONCE);
             $request = new Request($url, 'HEAD');
 
             try {
@@ -162,7 +162,7 @@ final class AcmeClient {
      * @return Promise Resolves to the resource URI.
      * @throws AcmeException If the specified resource is not in the directory.
      */
-    private function getResourceUri(string $resource): Promise {
+    private function getResourceUrl(string $resource): Promise {
         // ACME MUST be served over HTTPS, but we use HTTP for testing …
         if (0 === strpos($resource, 'http://') || 0 === strpos($resource, 'https://')) {
             return new Success($resource);
@@ -172,7 +172,7 @@ final class AcmeClient {
             return call(function () use ($resource) {
                 yield $this->fetchDirectory();
 
-                return $this->getResourceUri($resource);
+                return $this->getResourceUrl($resource);
             });
         }
 
@@ -223,49 +223,6 @@ final class AcmeClient {
     }
 
     /**
-     * Retrieves a resource using a GET request.
-     *
-     * @api
-     *
-     * @param string $resource Resource to fetch.
-     *
-     * @return Promise Resolves to the HTTP response.
-     * @throws AcmeException If the request failed.
-     */
-    public function get(string $resource): Promise {
-        return call(function () use ($resource) {
-            $url = yield $this->getResourceUri($resource);
-
-            $this->logger->debug('Requesting {url} via GET', [
-                'url' => $url,
-            ]);
-
-            try {
-                /** @var Response $response */
-                $this->http = $this->buildClient($resource);
-                $response = yield $this->http->request($url);
-
-                // We just buffer the body here, so no further I/O will happen once this method's promise resolves.
-                $body = yield $response->getBody();
-
-                $this->logger->debug('Request for {url} via GET has been processed with status {status}: {body}', [
-                    'url' => $url,
-                    'status' => $response->getStatus(),
-                    'body' => $body
-                ]);
-
-                $this->saveNonce($response);
-            } catch (Throwable $e) {
-                throw new AcmeException("GET request to {$url} failed: " . $e->getMessage(), null, $e);
-            } catch (Exception $e) {
-                throw new AcmeException("GET request to {$url} failed: " . $e->getMessage(), null, $e);
-            }
-
-            return $response;
-        });
-    }
-
-    /**
      * Retrieves a resource using a POST request.
      *
      * @api
@@ -278,7 +235,7 @@ final class AcmeClient {
      */
     public function post(string $resource, array $payload): Promise {
         return call(function () use ($resource, $payload) {
-            $url = yield $this->getResourceUri($resource);
+            $url = yield $this->getResourceUrl($resource);
 
             $attempt = 0;
             $statusCode = null;
