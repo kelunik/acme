@@ -97,7 +97,8 @@ class Order {
             $identifiers[] = Identifier::fromResponse($identifier);
         }
         return new Order($payload->status, $identifiers, $payload->authorizations, $payload->finalize,
-            $payload->expires, $payload->certificate, $payload->notBefore, $payload->notAfter);
+            $payload->expires ?? null, $payload->certificate ?? null,
+            $payload->notBefore ?? null, $payload->notAfter ?? null);
     }
 
     public function getStatus(): string {

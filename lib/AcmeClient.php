@@ -109,7 +109,6 @@ final class AcmeClient {
             'user-agent' => 'kelunik/acme',
             'Content-type' => 'application/jose+json'
         ]);
-
         return $client;
     }
 
@@ -219,6 +218,49 @@ final class AcmeClient {
             } catch (Throwable $e) {
                 throw new AcmeException('Could not obtain directory: ' . $e->getMessage(), null, $e);
             }
+        });
+    }
+
+    /**
+     * Retrieves a resource using a GET request.
+     *
+     * @api
+     *
+     * @param string $resource Resource to fetch.
+     *
+     * @return Promise Resolves to the HTTP response.
+     * @throws AcmeException If the request failed.
+     */
+    public function get(string $resource): Promise {
+        return call(function () use ($resource) {
+            $url = yield $this->getResourceUrl($resource);
+
+            $this->logger->debug('Requesting {url} via GET', [
+                'url' => $url,
+            ]);
+
+            try {
+                /** @var Response $response */
+                $this->http = $this->buildClient($resource);
+                $response = yield $this->http->request($url);
+
+                // We just buffer the body here, so no further I/O will happen once this method's promise resolves.
+                $body = yield $response->getBody();
+
+                $this->logger->debug('Request for {url} via GET has been processed with status {status}: {body}', [
+                    'url' => $url,
+                    'status' => $response->getStatus(),
+                    'body' => $body
+                ]);
+
+                $this->saveNonce($response);
+            } catch (Throwable $e) {
+                throw new AcmeException("GET request to {$url} failed: " . $e->getMessage(), null, $e);
+            } catch (Exception $e) {
+                throw new AcmeException("GET request to {$url} failed: " . $e->getMessage(), null, $e);
+            }
+
+            return $response;
         });
     }
 

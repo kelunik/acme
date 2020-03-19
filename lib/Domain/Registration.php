@@ -53,7 +53,7 @@ class Registration {
     }
 
     public static function fromResponse($payload): Registration {
-        return new Registration($payload->location, $payload->status, $payload->contact, $payload->order);
+        return new Registration($payload->location, $payload->status, $payload->contact ?? [], $payload->orders ?? null);
     }
 
     /**
