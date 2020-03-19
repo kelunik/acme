@@ -15,8 +15,8 @@ use Amp\Promise;
 use Amp\Success;
 use Kelunik\Acme\Crypto\RsaKeyGenerator;
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
 use function Amp\coroutine;
-use function Amp\Promise\wait;
 
 class AcmeClientTest extends TestCase {
     /**
@@ -69,16 +69,16 @@ class AcmeClientTest extends TestCase {
         $client = new AcmeClient(getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey());
 
         /** @var Response $response */
-        $response = wait($client->get(getenv('BOULDER_HOST') . '/directory'));
-//        $this->assertSame(200, $response->getStatus());
-//
-//        $data = json_decode(yield $response->getBody(), true);
-//
-//        $this->assertInternalType('array', $data);
-//        $this->assertArrayHasKey('new-authz', $data);
-//        $this->assertArrayHasKey('new-cert', $data);
-//        $this->assertArrayHasKey('new-reg', $data);
-//        $this->assertArrayHasKey('revoke-cert', $data);
+        $response = Promise\wait($client->get(getenv('BOULDER_HOST') . '/directory'));
+        $this->assertSame(200, $response->getStatus());
+
+        $data = json_decode(Promise\wait($response->getBody()), true);
+        $this->assertInternalType('array', $data);
+
+        $acmeResources = (new ReflectionClass(AcmeResource::class))->getConstants();
+        foreach ($acmeResources as $acmeResource) {
+            $this->assertArrayHasKey($acmeResource, $data);
+        }
     }
 
     /**
@@ -88,7 +88,7 @@ class AcmeClientTest extends TestCase {
     public function fetchesNonceWhenNoneAvailable() {
         $client = new AcmeClient(getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey());
 
-        Promise\wait($client->post(getenv('BOULDER_HOST') . '/acme/new-reg', []));
+        Promise\wait($client->post(getenv('BOULDER_HOST') . '/acme/new-acct', []));
         $this->addToAssertionCount(1);
     }
 
@@ -96,19 +96,7 @@ class AcmeClientTest extends TestCase {
      * @test
      * @depends boulderConfigured
      * @expectedException \Kelunik\Acme\AcmeException
-     * @expectedExceptionMessage HTTP response didn't carry replay-nonce header.
-     */
-    public function failsWithoutNonce() {
-        $client = new AcmeClient(getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey());
-
-        Promise\wait($client->post(getenv('BOULDER_HOST') . '/', []));
-    }
-
-    /**
-     * @test
-     * @depends boulderConfigured
-     * @expectedException \Kelunik\Acme\AcmeException
-     * @expectedExceptionMessage could not obtain a replay nonce
+     * @expectedExceptionMessageRegExp ~POST request to .* failed~
      */
     public function failsIfHostNotAvailable() {
         $client = new AcmeClient(getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey());
@@ -160,9 +148,9 @@ class AcmeClientTest extends TestCase {
         $http = $this->getMockBuilder(Client::class)->getMock();
         $http->method('request')->willReturn(new Success($response));
 
-        $client = new AcmeClient(getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey(), $http);
+        $client = new AcmeClient(getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey(), null, $http);
 
-        Promise\wait($client->get(AcmeResource::CHALLENGE));
+        Promise\wait($client->get(AcmeResource::NEW_ACCOUNT));
     }
 
     /**
@@ -175,16 +163,16 @@ class AcmeClientTest extends TestCase {
         $response = $this->getMockBuilder(Response::class)->getMock();
         $response->method('getStatus')->willReturn(400);
         $response->method('getBody')->willReturn(new Message(new InMemoryStream(json_encode([
-            'type' => 'urn:acme:error:foo',
+            'type' => 'acme:error:foo',
             'detail' => 'Foobar',
         ]))));
 
         $http = $this->getMockBuilder(Client::class)->getMock();
         $http->method('request')->willReturn(new Success($response));
 
-        $client = new AcmeClient(getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey(), $http);
+        $client = new AcmeClient(getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey(), null, $http);
 
-        Promise\wait($client->get(AcmeResource::CHALLENGE));
+        Promise\wait($client->get(AcmeResource::NEW_ACCOUNT));
     }
 
     /**
@@ -197,7 +185,7 @@ class AcmeClientTest extends TestCase {
         $mockResponse = $this->getMockBuilder(Response::class)->getMock();
         $mockResponse->method('getStatus')->willReturn(400);
         $mockResponse->method('getBody')->willReturn(new Message(new InMemoryStream(json_encode([
-            'type' => 'urn:acme:error:badNonce',
+            'type' => 'acme:error:badNonce',
         ]))));
 
         $http = $this->getMockBuilder(Client::class)->getMock();
@@ -213,9 +201,9 @@ class AcmeClientTest extends TestCase {
             return (new DefaultClient)->request($request);
         });
 
-        $client = new AcmeClient(getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey(), $http);
+        $client = new AcmeClient(getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey(), null, $http);
 
-        Promise\wait($client->post('new-reg', []));
+        Promise\wait($client->post(AcmeResource::NEW_ACCOUNT, []));
     }
 
     /**
@@ -228,7 +216,7 @@ class AcmeClientTest extends TestCase {
         $mockResponse = $this->getMockBuilder(Response::class)->getMock();
         $mockResponse->method('getStatus')->willReturn(400);
         $mockResponse->method('getBody')->willReturn(new Message(new InMemoryStream(json_encode([
-            'type' => 'urn:acme:error:badNonce',
+            'type' => 'acme:error:badNonce',
         ]))));
 
         $http = $this->getMockBuilder(Client::class)->getMock();
@@ -246,9 +234,9 @@ class AcmeClientTest extends TestCase {
             return (new DefaultClient)->request($request);
         }));
 
-        $client = new AcmeClient(getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey(), $http);
+        $client = new AcmeClient(getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey(), null, $http);
 
-        Promise\wait($client->post(AcmeResource::NEW_REGISTRATION, []));
+        Promise\wait($client->post(AcmeResource::NEW_ACCOUNT, []));
 
         $this->assertTrue($encounteredBadNonceError);
     }

@@ -41,10 +41,6 @@ final class AcmeResource {
      */
     const KEY_CHANGE = 'keyChange';
 
-    /**
-     * New authorization.
-     */
-    const NEW_AUTHORIZATION = 'newAuthz';
 
     public static function requiresJwkAuthorization(string $resource): bool {
         return $resource === self::NEW_ACCOUNT;
