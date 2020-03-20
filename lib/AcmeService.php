@@ -85,7 +85,7 @@ class AcmeService {
                         }
                     }
                 }
-                return new Registration($location, $payload->status, $payload->contact, $payload->orders);
+                return new Registration($location, $payload->status, $payload->contact, $payload->orders ?? null);
             }
 
             if ($response->getStatus() === 409) {
@@ -104,7 +104,7 @@ class AcmeService {
                 $response = yield $this->acmeClient->post($location, $payload);
                 $payload = json_decode(yield $response->getBody());
 
-                return new Registration($location, $payload->status, $payload->contact, $payload->orders);
+                return new Registration($location, $payload->status, $payload->contact, $payload->orders ?? null);
             }
 
             throw $this->generateException($response, yield $response->getBody());
