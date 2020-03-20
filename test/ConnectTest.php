@@ -20,8 +20,8 @@ class ConnectTest extends TestCase {
 
     public function provideCryptoConnectArgs() {
         return [
-            ['acme-v01.api.letsencrypt.org:443'],
-            ['acme-staging.api.letsencrypt.org:443'],
+            ['acme-v02.api.letsencrypt.org:443'],
+            ['acme-staging-v02.api.letsencrypt.org:443'],
         ];
     }
 }

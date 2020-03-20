@@ -2,39 +2,36 @@
 
 namespace Kelunik\Acme;
 
+use Kelunik\Acme\Domain\Registration;
 use PHPUnit\Framework\TestCase;
 
 class RegistrationTest extends TestCase {
     /**
-     * @param string      $location URI of the registration object
-     * @param array       $contact all contacts registered with the server
-     * @param string|null $agreement URI to the agreement, if agreed
-     * @param string      $authorizations URI to retrieve authorizations
-     * @param string      $certificates URI to retrieve certificates
-     *
+     * @param string $location URI of the registration object
+     * @param $status
+     * @param array $contact all contacts registered with the server
+     * @param null $orders
      * @dataProvider provideSuccessArgs
      * @test
      */
-    public function success($location, array $contact = [], $agreement = null, $authorizations = null, $certificates = null) {
-        $reg = new Registration($location, $contact, $agreement, $authorizations, $certificates);
+    public function success($location, $status, array $contact = [], $orders = null) {
+        $reg = new Registration($location, $status, $contact, $orders);
 
         $this->assertSame($location, $reg->getLocation());
         $this->assertSame($contact, $reg->getContact());
-        $this->assertSame($agreement, $reg->getAgreement());
-        $this->assertSame($authorizations, $reg->getAuthorizations());
-        $this->assertSame($certificates, $reg->getCertificates());
+        $this->assertSame($status, $reg->getStatus());
+        $this->assertSame($orders, $reg->getOrders());
     }
 
     public function provideSuccessArgs() {
-        $server = 'https://acme-v01.api.letsencrypt.org/directory';
+        $server = 'https://acme-v02.api.letsencrypt.org/directory';
 
         return [
-            [$server],
-            [$server, []],
-            [$server, ['mailto:me@example.com']],
-            [$server, ['mailto:me@example.com'], null, "{$server}/authz"],
-            [$server, ['mailto:me@example.com'], null, "{$server}/authz", "{$server}/certs"],
-            [$server, ['mailto:me@example.com'], "{$server}/tos", "{$server}/authz", "{$server}/certs"],
+            [$server, "ready"],
+            [$server, "ready", []],
+            [$server, "ready", ['mailto:me@example.com']],
+            [$server, "ready", ['mailto:me@example.com'], null],
+            [$server, "ready", ['mailto:me@example.com'], "{$server}/orders"],
         ];
     }
 }
