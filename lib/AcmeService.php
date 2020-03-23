@@ -112,6 +112,25 @@ class AcmeService {
     }
 
     /**
+     * Retrieves existing order using the order's location URL 
+     * @return \Amp\Promise
+     * @param string $location
+     */
+    public function getOrder(string $location): Promise {
+        return call(function () use($location) {
+            /** @var Response $response */
+            $response = yield $this->acmeClient->post($location, []);
+            
+            if (in_array($response->getStatus(), [200, 201])) {
+                $payload = json_decode(yield $response->getBody());
+                $payload->location = $location;
+                return Order::fromResponse($payload);
+            }
+            throw $this->generateException($response, yield $response->getBody());
+        });
+    }
+
+    /**
      * Submit a new order for the given DNS names
      *
      * @api
@@ -134,7 +153,12 @@ class AcmeService {
             ]);
 
             if (in_array($response->getStatus(), [200, 201])) {
+                if (!$response->hasHeader('location')) {
+                    throw new AcmeException('Protocol Violation: No Location Header');
+                }
+
                 $payload = json_decode(yield $response->getBody());
+                $payload->location = $response->getHeader('location');
                 return Order::fromResponse($payload);
             }
             throw $this->generateException($response, yield $response->getBody());
@@ -285,7 +309,12 @@ class AcmeService {
             ]);
 
             if ($response->getStatus() === 200) {
+                if (!$response->hasHeader('location')) {
+                    throw new AcmeException('Protocol Violation: No Location Header');
+                }
+
                 $payload = json_decode(yield $response->getBody());
+                $payload->location = $response->getHeader('location');
                 return Order::fromResponse($payload);
             }
 

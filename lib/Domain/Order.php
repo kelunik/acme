@@ -18,6 +18,11 @@ use Kelunik\Acme\AcmeException;
  */
 class Order {
     /**
+     * @var strign The location URL of this order.
+     */
+    private $location;
+    
+    /**
      * @var string The status of this order.
      */
     private $status;
@@ -64,6 +69,8 @@ class Order {
      * Order constructor.
      *
      * @throws \Kelunik\Acme\AcmeException
+     * @param string $location
+     * @param string $status The status of this account.
      * @param Identifier[] $identifiers
      * @param string[] $authorizations
      * @param string $finalize
@@ -71,11 +78,11 @@ class Order {
      * @param string|null $certificate
      * @param string|null $notBefore
      * @param string|null $notAfter
-     * @param string $status The status of this account.
      */
-    public function __construct(string $status, array $identifiers, array $authorizations, string $finalize,
+    public function __construct(string $location, string $status, array $identifiers, array $authorizations, string $finalize,
                                 string $expires = null, string $certificate = null, string $notBefore = null,
                                 string $notAfter = null) {
+        $this->location = $location;
         $this->status = $status;
         $this->identifiers = $identifiers;
         $this->authorizations = $authorizations;
@@ -96,9 +103,13 @@ class Order {
         foreach ($payload->identifiers ?? [] as $identifier) {
             $identifiers[] = Identifier::fromResponse($identifier);
         }
-        return new Order($payload->status, $identifiers, $payload->authorizations, $payload->finalize,
+        return new Order($payload->location, $payload->status, $identifiers, $payload->authorizations, $payload->finalize,
             $payload->expires ?? null, $payload->certificate ?? null,
             $payload->notBefore ?? null, $payload->notAfter ?? null);
+    }
+    
+    public function getLocation(): string {
+        return $this->location;
     }
 
     public function getStatus(): string {
