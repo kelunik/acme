@@ -15,7 +15,7 @@ namespace Kelunik\Acme\Domain;
  * @author Niklas Keller <me@kelunik.com>
  * @package Kelunik\Acme
  */
-class Registration {
+class Registration extends AcmeResponse {
     /**
      * @var string URI of the registration object.
      */
@@ -53,7 +53,9 @@ class Registration {
     }
 
     public static function fromResponse($payload): Registration {
-        return new Registration($payload->location, $payload->status, $payload->contact ?? [], $payload->orders ?? null);
+        return new Registration(...self::parsePayloadWithProps($payload, [
+            'location', 'status', 'contact' => [], 'orders' => null
+        ]));
     }
 
     /**

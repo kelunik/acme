@@ -15,7 +15,7 @@ namespace Kelunik\Acme\Domain;
  * @author Niklas Keller <me@kelunik.com>
  * @package Kelunik\Acme
  */
-class Authorization {
+class Authorization extends AcmeResponse {
     /**
      * @var Identifier The subjective identifier.
      */
@@ -52,12 +52,18 @@ class Authorization {
     }
 
     public static function fromResponse($payload): Authorization {
-        $identifier = Identifier::fromResponse($payload->identifier);
+        $identifier = self::getPropertyValue($payload, 'identifier');
+        $payload->identifier = Identifier::fromResponse($identifier);
+
         $challenges = [];
-        foreach ($payload->challenges ?? [] as $challenge) {
+        foreach (self::getPropertyValue($payload, 'challenges', false) ?? [] as $challenge) {
             $challenges[] = Challenge::fromResponse($challenge);
         }
-        return new Authorization($identifier, $payload->status, $payload->expires, $challenges);
+        $payload->challenges = $challenges;
+
+        return new Authorization(...self::parsePayloadWithProps($payload, [
+            'identifier', 'status', 'expires', 'challenges'
+        ]));
     }
 
     public function getIdentifier(): Identifier {

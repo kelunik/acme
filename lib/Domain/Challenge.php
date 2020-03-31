@@ -15,7 +15,7 @@ namespace Kelunik\Acme\Domain;
  * @author Niklas Keller <me@kelunik.com>
  * @package Kelunik\Acme
  */
-class Challenge {
+class Challenge extends AcmeResponse {
     /**
      * @var string Type validation of this challenge.
      */
@@ -52,7 +52,9 @@ class Challenge {
     }
 
     public static function fromResponse($payload): Challenge {
-        return new Challenge($payload->type, $payload->url, $payload->status, $payload->token);
+        return new Challenge(...self::parsePayloadWithProps($payload, [
+            'type', 'url', 'status', 'token'
+        ]));
     }
 
     public function getType(): string {

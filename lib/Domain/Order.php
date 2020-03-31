@@ -16,9 +16,9 @@ use Kelunik\Acme\AcmeException;
  *
  * @package Kelunik\Acme
  */
-class Order {
+class Order extends AcmeResponse {
     /**
-     * @var strign The location URL of this order.
+     * @var string The location URL of this order.
      */
     private $location;
     
@@ -100,12 +100,15 @@ class Order {
 
     public static function fromResponse($payload): Order {
         $identifiers = [];
-        foreach ($payload->identifiers ?? [] as $identifier) {
+        foreach (self::getPropertyValue($payload, 'identifiers', false) ?? [] as $identifier) {
             $identifiers[] = Identifier::fromResponse($identifier);
         }
-        return new Order($payload->location, $payload->status, $identifiers, $payload->authorizations, $payload->finalize,
-            $payload->expires ?? null, $payload->certificate ?? null,
-            $payload->notBefore ?? null, $payload->notAfter ?? null);
+        $payload->identifiers = $identifiers;
+
+        return new Order(...self::parsePayloadWithProps($payload, [
+           'location', 'status', 'identifiers', 'authorizations', 'finalize',
+            'expires' => null, 'certificate' => null, 'notBefore' => null, 'notAfter' => null
+        ]));
     }
     
     public function getLocation(): string {
