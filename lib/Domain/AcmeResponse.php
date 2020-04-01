@@ -9,22 +9,22 @@ use Kelunik\Acme\AcmeException;
 abstract class AcmeResponse {
 
     /**
-     * Parses the payload to the child AcmeResponse object. The constructor args are parsed from the payload and the
-     * a list of the given properties. When property not exists, and a defaultValue is provided, that is used.
-     * Otherwise, an exception is thrown.
+     * Parses the payload given a list of properties and returns the list of values in the same order the properties are given.
+     * When a property does not exist and a defaultValue is provided, that defaultValue is used.
+     * Otherwise an exception is thrown.
      *
      * $properties format should be in the same order as the constructor:
      * [
      *   "url" => null // default value is NULL
-     *   "location"    // No default value is set. When this property does not exists, an exception will be thrown.
+     *   "location"    // No default value is set. When this property does not exist, an exception will be thrown.
      * ]
      *
-     * The contructorArgs are returned.
+     * The property values are returned.
      *
-     * @return array $constructorArgs.
-     * @throws \Kelunik\Acme\AcmeException
      * @param $payload
-     *@param array $properties
+     * @param array $properties
+     * @return array property values.
+     * @throws \Kelunik\Acme\AcmeException
      */
     protected static function parsePayloadWithProps($payload, array $properties): array {
         $constructorArgs = [];
@@ -41,11 +41,11 @@ abstract class AcmeResponse {
 
     /**
      * Returns the property value from the payload if set. When not set, throw an exception if required.
-     * @return mixed
-     * @throws \Kelunik\Acme\AcmeException
      * @param bool $throwOnEmpty
      * @param $payload
      * @param string $property
+     * @return mixed
+     * @throws \Kelunik\Acme\AcmeException
      */
     protected static function getPropertyValue($payload, string $property, bool $throwOnEmpty = true) {
         $value = $payload->$property ?? null;

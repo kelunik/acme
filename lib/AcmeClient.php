@@ -81,8 +81,7 @@ final class AcmeClient {
      * @param string $accountLocation
      * @param PrivateKey $accountKey Account key.
      * @param Client|null $http Custom HTTP client, a default client will be used if no value is provided.
-     * @param Backend|null $cryptoBackend Custom crypto backend, a default OpensslBackend will be used if no value is
-     *                                      provided.
+     * @param Backend|null $cryptoBackend Custom crypto backend, a default OpensslBackend will be used if no value is provided.
      * @param PsrLogger|null $logger Logger for debug information.
      * @api
      *
