@@ -377,7 +377,7 @@ class AcmeService {
                             break; // No uplinks in this response. Break out :)
                         }
 
-                        if ($hasUplink && !$maximumChainLength--) {
+                        if (!$maximumChainLength--) {
                             throw new AcmeException('Too long certificate chain');
                         }
                     }
