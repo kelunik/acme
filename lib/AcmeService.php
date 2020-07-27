@@ -363,21 +363,22 @@ class AcmeService {
                     
                     while ($response->hasHeader('link')) {
                         $links = $response->getHeaderArray('link');
-                        $hasOnlyIndexLink = count($links) === 1 ? preg_match('#<(.*?)>;rel="index"#x', $links[0], $match) : 0;
-                        if($hasOnlyIndexLink > 0) {
-                            break;
-                        }
-                        
-                        if (!$maximumChainLength--) {
-                            throw new AcmeException('Too long certificate chain');
-                        }
-
+                        $hasUplink = false;
                         foreach ($links as $link) {
                             if (preg_match('#<(.*?)>;rel="up"#x', $link, $match)) {
                                 $url = \Sabre\Uri\resolve($response->getRequest()->getUri(), $match[1]);
                                 $response = yield $this->acmeClient->post($url, []);
                                 $certificates[] = yield $response->getBody();
+                                $hasUplink = true;
                             }
+                        }
+
+                        if(!$hasUplink) {
+                            break; // No uplinks in this response. Break out :)
+                        }
+
+                        if ($hasUplink && !$maximumChainLength--) {
+                            throw new AcmeException('Too long certificate chain');
                         }
                     }
 
