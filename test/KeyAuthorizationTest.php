@@ -7,23 +7,16 @@ use Kelunik\Acme\Crypto\PrivateKey;
 use Kelunik\Acme\Crypto\RsaKeyGenerator;
 use PHPUnit\Framework\TestCase;
 
-class KeyAuthorizationTest extends TestCase {
+class KeyAuthorizationTest extends TestCase
+{
     /**
      * @test
-     * @expectedException \TypeError
-     * @expectedExceptionMessage must be of the type string
      */
-    public function failsIfTokenNotString() {
-        $keyPair = (new RsaKeyGenerator)->generateKey();
-        generateKeyAuthorization($keyPair, null, new OpensslBackend);
-    }
+    public function failsWithInvalidKey(): void
+    {
+        $this->expectException(AcmeException::class);
+        $this->expectExceptionMessage("Couldn't read private key.");
 
-    /**
-     * @test
-     * @expectedException \Kelunik\Acme\AcmeException
-     * @expectedExceptionMessage Couldn't read private key.
-     */
-    public function failsWithInvalidKey() {
         $keyPair = new PrivateKey('abc');
         generateKeyAuthorization($keyPair, 'foobar', new OpensslBackend);
     }
@@ -31,7 +24,8 @@ class KeyAuthorizationTest extends TestCase {
     /**
      * @test
      */
-    public function containsTokenOnSuccess() {
+    public function containsTokenOnSuccess(): void
+    {
         $token = 'some-random-token';
         $keyPair = (new RsaKeyGenerator)->generateKey();
         $payload = generateKeyAuthorization($keyPair, $token, new OpensslBackend);

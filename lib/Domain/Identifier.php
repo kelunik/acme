@@ -15,7 +15,13 @@ namespace Kelunik\Acme\Domain;
  * @author Niklas Keller <me@kelunik.com>
  * @package Kelunik\Acme
  */
-class Identifier extends AcmeResponse {
+class Identifier extends AcmeResponse
+{
+    public static function fromResponse($payload): Identifier
+    {
+        return new Identifier(...self::parsePayloadWithProps($payload, ['type', 'value']));
+    }
+
     /**
      * @var string Type validation of this identifier.
      */
@@ -32,20 +38,19 @@ class Identifier extends AcmeResponse {
      * @param string $type
      * @param string $value
      */
-    public function __construct(string $type, string $value) {
+    public function __construct(string $type, string $value)
+    {
         $this->type = $type;
         $this->value = $value;
     }
 
-    public static function fromResponse($payload): Identifier {
-        return new Identifier(...self::parsePayloadWithProps($payload, ['type', 'value']));
-    }
-
-    public function getType(): string {
+    public function getType(): string
+    {
         return $this->type;
     }
 
-    public function getValue(): string {
+    public function getValue(): string
+    {
         return $this->value;
     }
 }

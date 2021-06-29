@@ -15,7 +15,18 @@ namespace Kelunik\Acme\Domain;
  * @author Niklas Keller <me@kelunik.com>
  * @package Kelunik\Acme
  */
-class Registration extends AcmeResponse {
+class Registration extends AcmeResponse
+{
+    public static function fromResponse($payload): Registration
+    {
+        return new Registration(...self::parsePayloadWithProps($payload, [
+            'location',
+            'status',
+            'contact' => [],
+            'orders' => null,
+        ]));
+    }
+
     /**
      * @var string URI of the registration object.
      */
@@ -36,65 +47,63 @@ class Registration extends AcmeResponse {
      */
     private $orders;
 
-
     /**
      * Registration constructor.
      *
      * @param string      $location URI of the registration object.
      * @param string      $status The status of this account.
      * @param array       $contact All contacts registered with the server.
-     * @param string      $orders An url to fetch orders for this registration from
+     * @param string|null $orders An url to fetch orders for this registration from
      */
-    public function __construct(string $location, string $status, array $contact = [], string $orders = null) {
+    public function __construct(string $location, string $status, array $contact = [], ?string $orders = null)
+    {
         $this->location = $location;
         $this->status = $status;
         $this->contact = $contact;
         $this->orders = $orders;
     }
 
-    public static function fromResponse($payload): Registration {
-        return new Registration(...self::parsePayloadWithProps($payload, [
-            'location', 'status', 'contact' => [], 'orders' => null
-        ]));
-    }
-
     /**
      * Gets the location URI.
      *
-     * @api
      * @return string URI to retrieve this registration object
+     * @api
      */
-    public function getLocation(): string {
+    public function getLocation(): string
+    {
         return $this->location;
     }
-    
+
     /**
      * Gets the account status.
      *
-     * @api
      * @return string Status of this account.
+     * @api
      */
-    public function getStatus() {
+    public function getStatus(): string
+    {
         return $this->status;
     }
-    
+
     /**
      * Gets the contact addresses.
      *
-     * @api
      * @return array Contacts registered with the server.
+     * @api
      */
-    public function getContact(): array {
+    public function getContact(): array
+    {
         return $this->contact;
     }
 
     /**
      * Gets the order URI from which the orders of this account can be fetched.
      *
-     * @api
      * @return null|string URI to fetch orders from
+     * @api
      */
-    public function getOrders() {
+    public function getOrders(): ?string
+    {
         return $this->orders;
     }
 }

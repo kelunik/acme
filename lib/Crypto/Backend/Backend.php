@@ -11,7 +11,9 @@ namespace Kelunik\Acme\Crypto\Backend;
 
 use Kelunik\Acme\Crypto\PrivateKey;
 
-interface Backend {
+interface Backend
+{
     public function toJwk(PrivateKey $privateKey): array;
+
     public function signJwt(PrivateKey $privateKey, string $nonce, array $payload, string $accountUrl = null): string;
 }

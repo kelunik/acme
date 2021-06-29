@@ -18,7 +18,8 @@ use Kelunik\Acme\Crypto\PrivateKey;
  *
  * @package Kelunik\Acme
  */
-interface CsrGenerator {
+interface CsrGenerator
+{
     /**
      * Generates a CSR for the given DNS names.
      *

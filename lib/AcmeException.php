@@ -17,7 +17,8 @@ use Exception;
  * @author Niklas Keller <me@kelunik.com>
  * @package Kelunik\Acme
  */
-class AcmeException extends Exception {
+class AcmeException extends Exception
+{
     /**
      * AcmeException constructor.
      *
@@ -25,7 +26,8 @@ class AcmeException extends Exception {
      * @param string|null     $code ACME error code.
      * @param \Throwable|null $previous Previous exception.
      */
-    public function __construct(string $message, string $code = null, \Throwable $previous = null) {
+    public function __construct(string $message, string $code = null, \Throwable $previous = null)
+    {
         parent::__construct($message, 0, $previous);
         $this->code = $code;
     }

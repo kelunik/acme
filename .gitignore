@@ -3,3 +3,5 @@ composer.lock
 output
 coverage
 .idea
+.php_cs.cache
+.phpunit.result.cache

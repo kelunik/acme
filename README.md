@@ -6,7 +6,7 @@
 
 **Required PHP Version**
 
-- PHP 7.0
+- PHP 7.2+
 
 **Installation**
 

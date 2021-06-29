@@ -9,11 +9,15 @@
 
 namespace Kelunik\Acme\Verifiers;
 
-use Amp\Artax\Client;
-use Amp\Artax\DefaultClient;
-use Amp\Artax\Response;
+use Amp\Http\Client\Connection\DefaultConnectionFactory;
+use Amp\Http\Client\Connection\UnlimitedConnectionPool;
+use Amp\Http\Client\HttpClient;
+use Amp\Http\Client\HttpClientBuilder;
+use Amp\Http\Client\Request;
+use Amp\Http\Client\Response;
 use Amp\Promise;
 use Amp\Socket\ClientTlsContext;
+use Amp\Socket\ConnectContext;
 use Kelunik\Acme\AcmeException;
 use function Amp\call;
 
@@ -22,16 +26,21 @@ use function Amp\call;
  *
  * @package Kelunik\Acme
  */
-final class Http01 {
-    private $client;
+final class Http01
+{
+    private $httpClient;
 
     /**
      * Http01 constructor.
      *
-     * @param Client|null $client HTTP client to use, otherwise a default client will be used.
+     * @param HttpClient|null $httpClient HTTP client to use, otherwise a default client will be used.
      */
-    public function __construct(Client $client = null) {
-        $this->client = $client ?? new DefaultClient(null, null, (new ClientTlsContext)->withoutPeerVerification());
+    public function __construct(?HttpClient $httpClient = null)
+    {
+        $this->httpClient = $httpClient ?? (new HttpClientBuilder)->usingPool(new UnlimitedConnectionPool(new DefaultConnectionFactory(
+            null,
+            (new ConnectContext)->withTlsContext((new ClientTlsContext(''))->withoutPeerVerification())
+        )))->build();
     }
 
     /**
@@ -39,26 +48,26 @@ final class Http01 {
      *
      * Can be used to verify a challenge before requesting validation from a CA to catch errors early.
      *
-     * @api
-     *
      * @param string $domain Domain to verify.
      * @param string $token Challenge token.
      * @param string $expectedPayload Expected payload.
      *
      * @return Promise Resolves successfully if the challenge has been successfully verified, otherwise fails.
      * @throws AcmeException If the challenge could not be verified.
+     * @api
      */
-    public function verifyChallenge(string $domain, string $token, string $expectedPayload): Promise {
+    public function verifyChallenge(string $domain, string $token, string $expectedPayload): Promise
+    {
         return call(function () use ($domain, $token, $expectedPayload) {
             $uri = "http://{$domain}/.well-known/acme-challenge/{$token}";
 
             /** @var Response $response */
-            $response = yield $this->client->request($uri);
+            $response = yield $this->httpClient->request(new Request($uri));
 
             /** @var string $body */
-            $body = yield $response->getBody();
+            $body = yield $response->getBody()->buffer();
 
-            if (rtrim($expectedPayload) !== rtrim($body)) {
+            if (\rtrim($expectedPayload) !== \rtrim($body)) {
                 throw new AcmeException("Verification failed, please check the response body for '{$uri}'. It contains '{$body}' but '{$expectedPayload}' was expected.");
             }
         });

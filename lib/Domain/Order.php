@@ -16,12 +16,33 @@ use Kelunik\Acme\AcmeException;
  *
  * @package Kelunik\Acme
  */
-class Order extends AcmeResponse {
+class Order extends AcmeResponse
+{
+    public static function fromResponse($payload): Order
+    {
+        $identifiers = [];
+        foreach (self::getPropertyValue($payload, 'identifiers', false) ?? [] as $identifier) {
+            $identifiers[] = Identifier::fromResponse($identifier);
+        }
+        $payload->identifiers = $identifiers;
+
+        return new Order(...self::parsePayloadWithProps($payload, [
+            'location',
+            'status',
+            'identifiers',
+            'authorizations',
+            'finalize',
+            'expires' => null,
+            'certificate' => null,
+            'notBefore' => null,
+            'notAfter' => null,
+        ]));
+    }
     /**
      * @var string The location URL of this order.
      */
     private $location;
-    
+
     /**
      * @var string The status of this order.
      */
@@ -68,20 +89,29 @@ class Order extends AcmeResponse {
     /**
      * Order constructor.
      *
-     * @throws \Kelunik\Acme\AcmeException
-     * @param string $location
-     * @param string $status The status of this account.
+     * @param string       $location
+     * @param string       $status The status of this account.
      * @param Identifier[] $identifiers
-     * @param string[] $authorizations
-     * @param string $finalize
-     * @param string|null $expires
-     * @param string|null $certificate
-     * @param string|null $notBefore
-     * @param string|null $notAfter
+     * @param string[]     $authorizations
+     * @param string       $finalize
+     * @param string|null  $expires
+     * @param string|null  $certificate
+     * @param string|null  $notBefore
+     * @param string|null  $notAfter
+     *
+     * @throws \Kelunik\Acme\AcmeException
      */
-    public function __construct(string $location, string $status, array $identifiers, array $authorizations, string $finalize,
-                                string $expires = null, string $certificate = null, string $notBefore = null,
-                                string $notAfter = null) {
+    public function __construct(
+        string $location,
+        string $status,
+        array $identifiers,
+        array $authorizations,
+        string $finalize,
+        string $expires = null,
+        string $certificate = null,
+        string $notBefore = null,
+        string $notAfter = null
+    ) {
         $this->location = $location;
         $this->status = $status;
         $this->identifiers = $identifiers;
@@ -89,7 +119,7 @@ class Order extends AcmeResponse {
         $this->finalize = $finalize;
 
         $this->expires = $expires;
-        if(empty($expires) && in_array($status, [OrderStatus::PENDING, OrderStatus::VALID])) {
+        if (empty($expires) && \in_array($status, [OrderStatus::PENDING, OrderStatus::VALID])) {
             throw new AcmeException("Expires field is mandatory when order status is `pending` or `valid`");
         }
 
@@ -98,58 +128,54 @@ class Order extends AcmeResponse {
         $this->notAfter = $notAfter;
     }
 
-    public static function fromResponse($payload): Order {
-        $identifiers = [];
-        foreach (self::getPropertyValue($payload, 'identifiers', false) ?? [] as $identifier) {
-            $identifiers[] = Identifier::fromResponse($identifier);
-        }
-        $payload->identifiers = $identifiers;
-
-        return new Order(...self::parsePayloadWithProps($payload, [
-           'location', 'status', 'identifiers', 'authorizations', 'finalize',
-            'expires' => null, 'certificate' => null, 'notBefore' => null, 'notAfter' => null
-        ]));
-    }
-    
-    public function getLocation(): string {
+    public function getLocation(): string
+    {
         return $this->location;
     }
 
-    public function getStatus(): string {
+    public function getStatus(): string
+    {
         return $this->status;
     }
 
     /**
      * @return Identifier[]
      */
-    public function getIdentifiers(): array {
+    public function getIdentifiers(): array
+    {
         return $this->identifiers;
     }
 
     /**
      * @return string[]
      */
-    public function getAuthorizations(): array {
+    public function getAuthorizations(): array
+    {
         return $this->authorizations;
     }
 
-    public function getFinalize(): string {
+    public function getFinalize(): string
+    {
         return $this->finalize;
     }
 
-    public function getExpires() {
+    public function getExpires()
+    {
         return $this->expires;
     }
 
-    public function getCertificate() {
+    public function getCertificate()
+    {
         return $this->certificate;
     }
 
-    public function getNotBefore() {
+    public function getNotBefore()
+    {
         return $this->notBefore;
     }
 
-    public function getNotAfter() {
+    public function getNotAfter()
+    {
         return $this->notAfter;
     }
 }

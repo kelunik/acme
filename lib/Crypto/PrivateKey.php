@@ -9,14 +9,17 @@
 
 namespace Kelunik\Acme\Crypto;
 
-final class PrivateKey {
+final class PrivateKey
+{
     private $pem;
 
-    public function __construct(string $pem) {
+    public function __construct(string $pem)
+    {
         $this->pem = $pem;
     }
 
-    public function toPem(): string {
+    public function toPem(): string
+    {
         return $this->pem;
     }
 }

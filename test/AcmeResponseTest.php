@@ -9,11 +9,13 @@ use Kelunik\Acme\Domain\Order;
 use Kelunik\Acme\Domain\Registration;
 use PHPUnit\Framework\TestCase;
 
-class AcmeResponseTest extends TestCase {
+class AcmeResponseTest extends TestCase
+{
     /**
      * @test
      */
-    public function parseIdentifierObject() {
+    public function parseIdentifierObject(): void
+    {
         $payloadIdentifier = new \stdClass();
         $payloadIdentifier->type = "type";
         $payloadIdentifier->value = "value";
@@ -25,10 +27,12 @@ class AcmeResponseTest extends TestCase {
 
     /**
      * @test
-     * @expectedException \Kelunik\Acme\AcmeException
-     * @expectedExceptionMessage Error parsing property: value for Identifier response
      */
-    public function failsParseIdentifierObject() {
+    public function failsParseIdentifierObject(): void
+    {
+        $this->expectException(AcmeException::class);
+        $this->expectExceptionMessage('Error parsing property: value for Identifier response');
+
         $payloadIdentifier = new \stdClass();
         $payloadIdentifier->type = "type";
         Identifier::fromResponse($payloadIdentifier);
@@ -37,7 +41,8 @@ class AcmeResponseTest extends TestCase {
     /**
      * @test
      */
-    public function parseChallengeObject() {
+    public function parseChallengeObject(): void
+    {
         $payloadChallenge = new \stdClass();
         $payloadChallenge->type = "type";
         $payloadChallenge->url = "url";
@@ -53,10 +58,12 @@ class AcmeResponseTest extends TestCase {
 
     /**
      * @test
-     * @expectedException \Kelunik\Acme\AcmeException
-     * @expectedExceptionMessage Error parsing property: token for Challenge response
      */
-    public function failsParseChallengeObject() {
+    public function failsParseChallengeObject(): void
+    {
+        $this->expectException(AcmeException::class);
+        $this->expectExceptionMessage('Error parsing property: token for Challenge response');
+
         $payloadChallenge = new \stdClass();
         $payloadChallenge->type = "type";
         $payloadChallenge->url = "url";
@@ -67,7 +74,8 @@ class AcmeResponseTest extends TestCase {
     /**
      * @test
      */
-    public function parseAuthorizationObject() {
+    public function parseAuthorizationObject(): void
+    {
         $payloadChallenge = new \stdClass();
         $payloadChallenge->type = "type";
         $payloadChallenge->url = "url";
@@ -94,10 +102,12 @@ class AcmeResponseTest extends TestCase {
 
     /**
      * @test
-     * @expectedException \Kelunik\Acme\AcmeException
-     * @expectedExceptionMessage Error parsing property: identifier for Authorization response
      */
-    public function failsParseIdentifierForAuthorizationObject() {
+    public function failsParseIdentifierForAuthorizationObject(): void
+    {
+        $this->expectException(AcmeException::class);
+        $this->expectExceptionMessage('Error parsing property: identifier for Authorization response');
+
         $payloadChallenge = new \stdClass();
         $payloadChallenge->type = "type";
         $payloadChallenge->url = "url";
@@ -115,7 +125,8 @@ class AcmeResponseTest extends TestCase {
     /**
      * @test
      */
-    public function parseChallengeForAuthorizationObject() {
+    public function parseChallengeForAuthorizationObject(): void
+    {
         $payloadIdentifier = new \stdClass();
         $payloadIdentifier->type = "type";
         $payloadIdentifier->value = "value";
@@ -136,7 +147,8 @@ class AcmeResponseTest extends TestCase {
     /**
      * @test
      */
-    public function parseOrderObjectWithDefaultValues() {
+    public function parseOrderObjectWithDefaultValues(): void
+    {
         $payloadIdentifier = new \stdClass();
         $payloadIdentifier->type = "type";
         $payloadIdentifier->value = "value";
@@ -163,10 +175,12 @@ class AcmeResponseTest extends TestCase {
 
     /**
      * @test
-     * @expectedException \Kelunik\Acme\AcmeException
-     * @expectedExceptionMessage Error parsing property: finalize for Order response
      */
-    public function parseFailsOrderObject() {
+    public function parseFailsOrderObject(): void
+    {
+        $this->expectException(AcmeException::class);
+        $this->expectExceptionMessage('Error parsing property: finalize for Order response');
+
         $payloadIdentifier = new \stdClass();
         $payloadIdentifier->type = "type";
         $payloadIdentifier->value = "value";
@@ -183,7 +197,8 @@ class AcmeResponseTest extends TestCase {
     /**
      * @test
      */
-    public function parseRegistrationObject() {
+    public function parseRegistrationObject(): void
+    {
         $payloadRegistration = new \stdClass();
         $payloadRegistration->location = 'location';
         $payloadRegistration->status = 'status';
@@ -198,12 +213,14 @@ class AcmeResponseTest extends TestCase {
 
     /**
      * @test
-     * @expectedException \Kelunik\Acme\AcmeException
-     * @expectedExceptionMessage Error parsing property: status for Registration response
      */
-    public function parseFailsRegistrationObject() {
+    public function parseFailsRegistrationObject(): void
+    {
         $payloadRegistration = new \stdClass();
         $payloadRegistration->location = 'location';
+
+        $this->expectException(AcmeException::class);
+        $this->expectExceptionMessage('Error parsing property: status for Registration response');
 
         Registration::fromResponse($payloadRegistration);
     }

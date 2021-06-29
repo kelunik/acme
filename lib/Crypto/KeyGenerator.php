@@ -15,13 +15,13 @@ namespace Kelunik\Acme\Crypto;
  * @author Niklas Keller <me@kelunik.com>
  * @package Kelunik\Acme
  */
-interface KeyGenerator {
+interface KeyGenerator
+{
     /**
      * Generates a new key pair.
      *
-     * @api
-     *
      * @return PrivateKey Resolves to the generated key pair.
+     * @api
      */
     public function generateKey(): PrivateKey;
 }

@@ -17,7 +17,8 @@ use Phar;
  * @author Niklas Keller <me@kelunik.com>
  * @package Kelunik\Acme
  */
-class RsaKeyGenerator implements KeyGenerator {
+class RsaKeyGenerator implements KeyGenerator
+{
     private $bits;
 
     /**
@@ -25,7 +26,8 @@ class RsaKeyGenerator implements KeyGenerator {
      *
      * @param int $bits Bits of the key to generate.
      */
-    public function __construct(int $bits = 2048) {
+    public function __construct(int $bits = 2048)
+    {
         if ($bits < 2048) {
             throw new \Error('Keys with fewer than 2048 bits are not allowed.');
         }
@@ -34,35 +36,40 @@ class RsaKeyGenerator implements KeyGenerator {
     }
 
     /** @inheritdoc */
-    public function generateKey(): PrivateKey {
+    public function generateKey(): PrivateKey
+    {
         $configFile = $defaultConfigFile = __DIR__ . '/../../res/openssl.cnf';
 
-        if (class_exists('Phar') && !empty(Phar::running())) {
-            $configContent = file_get_contents($configFile);
+        if (\class_exists('Phar') && !empty(Phar::running())) {
+            $configContent = \file_get_contents($configFile);
 
-            $configFile = tempnam(sys_get_temp_dir(), 'acme_openssl_');
-            file_put_contents($configFile, $configContent);
+            $configFile = \tempnam(\sys_get_temp_dir(), 'acme_openssl_');
+            \file_put_contents($configFile, $configContent);
 
-            register_shutdown_function(function () use ($configFile) {
-                @unlink($configFile);
+            \register_shutdown_function(function () use ($configFile) {
+                @\unlink($configFile);
             });
         }
 
-        $res = openssl_pkey_new([
+        $res = \openssl_pkey_new([
             'private_key_type' => \OPENSSL_KEYTYPE_RSA,
             'private_key_bits' => $this->bits,
             'config' => $configFile,
         ]);
 
-        $success = openssl_pkey_export($res, $privateKey, null, [
+        $success = \openssl_pkey_export($res, $privateKey, null, [
             'config' => $configFile,
         ]);
 
         if ($configFile !== $defaultConfigFile) {
-            @unlink($configFile);
+            @\unlink($configFile);
         }
 
-        \openssl_pkey_free($res);
+        if (\PHP_VERSION_ID < 80000) {
+            \openssl_pkey_free($res);
+        } else {
+            unset($res);
+        }
 
         if (!$success) {
             throw new CryptoException('Key export failed!');

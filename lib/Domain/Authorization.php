@@ -15,7 +15,27 @@ namespace Kelunik\Acme\Domain;
  * @author Niklas Keller <me@kelunik.com>
  * @package Kelunik\Acme
  */
-class Authorization extends AcmeResponse {
+class Authorization extends AcmeResponse
+{
+    public static function fromResponse($payload): Authorization
+    {
+        $identifier = self::getPropertyValue($payload, 'identifier');
+        $payload->identifier = Identifier::fromResponse($identifier);
+
+        $challenges = [];
+        foreach (self::getPropertyValue($payload, 'challenges', false) ?? [] as $challenge) {
+            $challenges[] = Challenge::fromResponse($challenge);
+        }
+        $payload->challenges = $challenges;
+
+        return new Authorization(...self::parsePayloadWithProps($payload, [
+            'identifier',
+            'status',
+            'expires',
+            'challenges',
+        ]));
+    }
+
     /**
      * @var Identifier The subjective identifier.
      */
@@ -39,49 +59,39 @@ class Authorization extends AcmeResponse {
     /**
      * Authorization constructor.
      *
-     * @param Identifier $identifier
-     * @param string $status The status of this account.
-     * @param string $expires
+     * @param Identifier  $identifier
+     * @param string      $status The status of this account.
+     * @param string      $expires
      * @param Challenge[] $challenges
      */
-    public function __construct(Identifier $identifier, string $status, string $expires, array $challenges = []) {
+    public function __construct(Identifier $identifier, string $status, string $expires, array $challenges = [])
+    {
         $this->identifier = $identifier;
         $this->status = $status;
         $this->expires = $expires;
         $this->challenges = $challenges;
     }
 
-    public static function fromResponse($payload): Authorization {
-        $identifier = self::getPropertyValue($payload, 'identifier');
-        $payload->identifier = Identifier::fromResponse($identifier);
-
-        $challenges = [];
-        foreach (self::getPropertyValue($payload, 'challenges', false) ?? [] as $challenge) {
-            $challenges[] = Challenge::fromResponse($challenge);
-        }
-        $payload->challenges = $challenges;
-
-        return new Authorization(...self::parsePayloadWithProps($payload, [
-            'identifier', 'status', 'expires', 'challenges'
-        ]));
-    }
-
-    public function getIdentifier(): Identifier {
+    public function getIdentifier(): Identifier
+    {
         return $this->identifier;
     }
 
-    public function getStatus(): string {
+    public function getStatus(): string
+    {
         return $this->status;
     }
 
-    public function getExpires(): string {
+    public function getExpires(): string
+    {
         return $this->expires;
     }
 
     /**
      * @return Challenge[]
      */
-    public function getChallenges(): array {
+    public function getChallenges(): array
+    {
         return $this->challenges;
     }
 }

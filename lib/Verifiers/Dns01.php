@@ -19,7 +19,8 @@ use function Amp\call;
  *
  * @package Kelunik\Acme
  */
-final class Dns01 {
+final class Dns01
+{
     /** @var Dns\Resolver */
     private $resolver;
 
@@ -28,7 +29,8 @@ final class Dns01 {
      *
      * @param Dns\Resolver|null $resolver DNS resolver, otherwise a default resolver will be used.
      */
-    public function __construct(Dns\Resolver $resolver = null) {
+    public function __construct(Dns\Resolver $resolver = null)
+    {
         $this->resolver = $resolver ?? Dns\resolver();
     }
 
@@ -37,15 +39,15 @@ final class Dns01 {
      *
      * Can be used to verify a challenge before requesting validation from a CA to catch errors early.
      *
-     * @api
-     *
      * @param string $domain domain to verify
      * @param string $expectedPayload expected DNS record value
      *
      * @return Promise Resolves successfully if the challenge has been successfully verified, otherwise fails.
      * @throws AcmeException If the challenge could not be verified.
+     * @api
      */
-    public function verifyChallenge(string $domain, string $expectedPayload): Promise {
+    public function verifyChallenge(string $domain, string $expectedPayload): Promise
+    {
         return call(function () use ($domain, $expectedPayload) {
             $uri = '_acme-challenge.' . $domain;
 
@@ -54,8 +56,12 @@ final class Dns01 {
                 $dnsRecords = yield $this->resolver->query($uri, Dns\Record::TXT);
             } catch (Dns\NoRecordException $e) {
                 throw new AcmeException("Verification failed, no TXT record found for '{$uri}'.", 0, $e);
-            } catch (Dns\ResolutionException $e) {
-                throw new AcmeException("Verification failed, couldn't query TXT record of '{$uri}': " . $e->getMessage(), 0, $e);
+            } catch (Dns\DnsException $e) {
+                throw new AcmeException(
+                    "Verification failed, couldn't query TXT record of '{$uri}': " . $e->getMessage(),
+                    0,
+                    $e
+                );
             }
 
             $values = [];

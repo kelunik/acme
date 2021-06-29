@@ -5,16 +5,19 @@ namespace Kelunik\Acme;
 use Kelunik\Acme\Domain\Registration;
 use PHPUnit\Framework\TestCase;
 
-class RegistrationTest extends TestCase {
+class RegistrationTest extends TestCase
+{
     /**
      * @param string $location URI of the registration object
-     * @param $status
-     * @param array $contact all contacts registered with the server
-     * @param null $orders
+     * @param        $status
+     * @param array  $contact all contacts registered with the server
+     * @param null   $orders
+     *
      * @dataProvider provideSuccessArgs
      * @test
      */
-    public function success($location, $status, array $contact = [], $orders = null) {
+    public function success(string $location, $status, array $contact = [], $orders = null): void
+    {
         $reg = new Registration($location, $status, $contact, $orders);
 
         $this->assertSame($location, $reg->getLocation());
@@ -23,7 +26,8 @@ class RegistrationTest extends TestCase {
         $this->assertSame($orders, $reg->getOrders());
     }
 
-    public function provideSuccessArgs() {
+    public function provideSuccessArgs(): array
+    {
         $server = 'https://acme-v02.api.letsencrypt.org/directory';
 
         return [

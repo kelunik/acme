@@ -10,25 +10,24 @@
 namespace Kelunik\Acme\Crypto\Backend;
 
 use Kelunik\Acme\AcmeException;
-use Kelunik\Acme\Crypto\PrivateKey;
 use Kelunik\Acme\Crypto\CryptoException;
-use Namshi\JOSE\Base64\Base64UrlSafeEncoder;
+use Kelunik\Acme\Crypto\PrivateKey;
+use function Kelunik\Acme\base64UrlEncode;
 
-final class OpensslBackend implements Backend {
-    private $encoder;
-
-    public function __construct() {
-        $this->encoder = new Base64UrlSafeEncoder;
-    }
-
+final class OpensslBackend implements Backend
+{
     /**
-     * Creates a "jwK" (JSON Web Key)
+     * Creates a JSON Web Key (jwk).
+     *
+     * @param PrivateKey $privateKey
+     *
      * @return array
-     * @throws \Kelunik\Acme\Crypto\CryptoException
-     * @param \Kelunik\Acme\Crypto\PrivateKey $privateKey
+     * @throws CryptoException
+     *
      * @see https://tools.ietf.org/html/rfc7517
      */
-    public function toJwk(PrivateKey $privateKey): array {
+    public function toJwk(PrivateKey $privateKey): array
+    {
         $key = \openssl_pkey_get_private($privateKey->toPem());
 
         if (!$key) {
@@ -42,50 +41,52 @@ final class OpensslBackend implements Backend {
         }
 
         return [
-            'e' => $this->encoder->encode($details['rsa']['e']),
+            'e' => base64UrlEncode($details['rsa']['e']),
             'kty' => 'RSA',
-            'n' => $this->encoder->encode($details['rsa']['n']),
+            'n' => base64UrlEncode($details['rsa']['n']),
         ];
     }
 
     /**
      * Generates a signed JWS request for a POST or POST-as-GET request.
+     *
      * If accountUrl is provided, it uses the 'kid' field. Otherwise it uses the jwk.
-     * @return string
-     * @throws \Kelunik\Acme\Crypto\CryptoException
-     * @throws \Kelunik\Acme\AcmeException
-     * @param array $payload
+     *
+     * @param array       $payload
      * @param string|null $accountUrl
-     * @param \Kelunik\Acme\Crypto\PrivateKey $privateKey
-     * @param string $nonce
+     * @param PrivateKey  $privateKey
+     * @param string      $nonce
+     *
+     * @return string
+     * @throws CryptoException
+     * @throws AcmeException
      */
-    public function signJwt(PrivateKey $privateKey, string $nonce, array $payload, string $accountUrl = null): string {
-        if(!isset($payload)) {
-            throw new AcmeException("Payload URL is not set");
-        }
-
+    public function signJwt(PrivateKey $privateKey, string $nonce, array $payload, ?string $accountUrl = null): string
+    {
         $url = $payload['url'];
         unset($payload['url']);
-        
+
         $jws = [
             'alg' => 'RS256',
             'url' => $url,
             'nonce' => $nonce,
-            ($accountUrl ? 'kid' : 'jwk') => ($accountUrl ?? $this->toJwk($privateKey))
         ];
-        
-        $protected = $this->encoder->encode(json_encode($jws));
-        if(!empty($payload)) {
-            $payload = $this->encoder->encode(json_encode($payload));
+
+        if ($accountUrl) {
+            $jws['kid'] = $accountUrl;
         } else {
-            $payload = '';
+            $jws['jwk'] = $this->toJwk($privateKey);
         }
 
-        openssl_sign("$protected.$payload", $signed, $privateKey->toPem(), "SHA256");
-        return json_encode([
+        $protected = base64UrlEncode(\json_encode($jws));
+        $payloadString = $payload === [] ? '' : base64UrlEncode(\json_encode($payload));
+
+        \openssl_sign("$protected.$payloadString", $signed, $privateKey->toPem(), "SHA256");
+
+        return \json_encode([
             'protected' => $protected,
-            'payload' => $payload,
-            'signature' => $this->encoder->encode($signed)
+            'payload' => $payloadString,
+            'signature' => base64UrlEncode($signed),
         ]);
     }
 }

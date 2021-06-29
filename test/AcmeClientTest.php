@@ -2,28 +2,31 @@
 
 namespace Kelunik\Acme;
 
-use Amp\Artax\Client;
-use Amp\Artax\DefaultClient;
-use Amp\Artax\Request;
-use Amp\Artax\Response;
 use Amp\ByteStream\InMemoryStream;
-use Amp\ByteStream\Message;
+use Amp\CancellationToken;
 use Amp\Dns\NoRecordException;
 use Amp\Dns\Resolver;
 use Amp\Failure;
+use Amp\Http\Client\ApplicationInterceptor;
+use Amp\Http\Client\DelegateHttpClient;
+use Amp\Http\Client\HttpClientBuilder;
+use Amp\Http\Client\Request;
+use Amp\Http\Client\Response;
 use Amp\Promise;
 use Amp\Success;
 use Kelunik\Acme\Crypto\RsaKeyGenerator;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
-use function Amp\coroutine;
+use function Amp\Dns\resolver;
 
-class AcmeClientTest extends TestCase {
+class AcmeClientTest extends TestCase
+{
     /**
      * @test
      */
-    public function boulderConfigured() {
-        if (getenv('BOULDER_HOST') === false) {
+    public function boulderConfigured(): void
+    {
+        if (\getenv('BOULDER_HOST') === false) {
             $this->markTestSkipped('No Boulder host set. Set the environment variable BOULDER_HOST to enable those tests.');
         }
 
@@ -32,32 +35,27 @@ class AcmeClientTest extends TestCase {
 
     /**
      * @test
-     * @expectedException \TypeError
-     * @expectedExceptionMessage must be of the type string
-     */
-    public function failsIfDirectoryUriNotString() {
-        new AcmeClient(null, (new RsaKeyGenerator)->generateKey());
-    }
-
-    /**
-     * @test
      * @depends boulderConfigured
-     * @expectedException \TypeError
-     * @expectedExceptionMessage must be of the type string
      */
-    public function failsIfPostResourceIsEmpty() {
-        $client = new AcmeClient(getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey());
+    public function failsIfPostResourceIsEmpty(): void
+    {
+        $this->expectException(\TypeError::class);
+        $this->expectDeprecationMessage('must be of the type string');
+
+        $client = new AcmeClient(\getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey());
         Promise\wait($client->post(null, []));
     }
 
     /**
      * @test
      * @depends boulderConfigured
-     * @expectedException \Kelunik\Acme\AcmeException
-     * @expectedExceptionMessage Resource not found in directory
      */
-    public function failsIfResourceIsNoUriAndNotInDirectory() {
-        $client = new AcmeClient(getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey());
+    public function failsIfResourceIsNoUriAndNotInDirectory(): void
+    {
+        $this->expectException(AcmeException::class);
+        $this->expectDeprecationMessage('Resource not found in directory');
+
+        $client = new AcmeClient(\getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey());
         Promise\wait($client->post('foobar', []));
     }
 
@@ -65,15 +63,16 @@ class AcmeClientTest extends TestCase {
      * @test
      * @depends boulderConfigured
      */
-    public function canFetchDirectory() {
-        $client = new AcmeClient(getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey());
+    public function canFetchDirectory(): void
+    {
+        $client = new AcmeClient(\getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey());
 
         /** @var Response $response */
-        $response = Promise\wait($client->get(getenv('BOULDER_HOST') . '/directory'));
+        $response = Promise\wait($client->get(\getenv('BOULDER_HOST') . '/directory'));
         $this->assertSame(200, $response->getStatus());
 
-        $data = json_decode(Promise\wait($response->getBody()), true);
-        $this->assertInternalType('array', $data);
+        $data = \json_decode(Promise\wait($response->getBody()->buffer()), true);
+        $this->assertIsArray($data);
 
         $acmeResources = (new ReflectionClass(AcmeResource::class))->getConstants();
         foreach ($acmeResources as $acmeResource) {
@@ -85,21 +84,24 @@ class AcmeClientTest extends TestCase {
      * @test
      * @depends boulderConfigured
      */
-    public function fetchesNonceWhenNoneAvailable() {
-        $client = new AcmeClient(getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey());
+    public function fetchesNonceWhenNoneAvailable(): void
+    {
+        $client = new AcmeClient(\getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey());
 
-        Promise\wait($client->post(getenv('BOULDER_HOST') . '/acme/new-acct', []));
+        Promise\wait($client->post(\getenv('BOULDER_HOST') . '/acme/new-acct', []));
         $this->addToAssertionCount(1);
     }
 
     /**
      * @test
      * @depends boulderConfigured
-     * @expectedException \Kelunik\Acme\AcmeException
-     * @expectedExceptionMessageRegExp ~POST request to .* failed~
      */
-    public function failsIfHostNotAvailable() {
-        $client = new AcmeClient(getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey());
+    public function failsIfHostNotAvailable(): void
+    {
+        $this->expectException(AcmeException::class);
+        $this->expectExceptionMessageMatches('~POST request to .* failed~');
+
+        $client = new AcmeClient(\getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey());
 
         // mute because of stream_socket_enable_crypto(): SSL: Connection refused warning
         @Promise\wait($client->post('https://127.0.0.1:444/', []));
@@ -108,16 +110,18 @@ class AcmeClientTest extends TestCase {
     /**
      * @test
      * @depends boulderConfigured
-     * @expectedException \Kelunik\Acme\AcmeException
-     * @expectedExceptionMessageRegExp ~GET request to .* failed~
      */
-    public function failsIfDnsFails() {
+    public function failsIfDnsFails(): void
+    {
+        $this->expectException(AcmeException::class);
+        $this->expectExceptionMessageMatches('~GET request to .* failed~');
+
         $resolver = $this->getMockBuilder(Resolver::class)->getMock();
         $resolver->method('resolve')->willReturn(new Failure(new NoRecordException));
 
-        \Amp\Dns\resolver($resolver);
+        resolver($resolver);
 
-        $client = new AcmeClient(getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey());
+        $client = new AcmeClient(\getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey());
 
         Promise\wait($client->get('https://localhost:4000/'));
     }
@@ -125,11 +129,13 @@ class AcmeClientTest extends TestCase {
     /**
      * @test
      * @depends boulderConfigured
-     * @expectedException \TypeError
-     * @expectedExceptionMessage must be of the type string
      */
-    public function failsWithGetNotString() {
-        $client = new AcmeClient(getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey());
+    public function failsWithGetNotString(): void
+    {
+        $this->expectException(\TypeError::class);
+        $this->expectDeprecationMessage('must be of the type string');
+
+        $client = new AcmeClient(\getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey());
 
         Promise\wait($client->get(null));
     }
@@ -137,18 +143,32 @@ class AcmeClientTest extends TestCase {
     /**
      * @test
      * @depends boulderConfigured
-     * @expectedException \Kelunik\Acme\AcmeException
-     * @expectedExceptionMessage Invalid directory response. HTTP response code: 400
      */
-    public function failsWithInvalidDirectoryResponse() {
-        $response = $this->getMockBuilder(Response::class)->getMock();
-        $response->method('getStatus')->willReturn(400);
-        $response->method('getBody')->willReturn(new Message(new InMemoryStream('')));
+    public function failsWithInvalidDirectoryResponse(): void
+    {
+        $this->expectException(AcmeException::class);
+        $this->expectExceptionMessage('Invalid directory response. HTTP response code: 400');
 
-        $http = $this->getMockBuilder(Client::class)->getMock();
-        $http->method('request')->willReturn(new Success($response));
+        $interceptor = new class implements ApplicationInterceptor {
+            public function request(
+                Request $request,
+                CancellationToken $cancellation,
+                DelegateHttpClient $httpClient
+            ): Promise {
+                return new Success(new Response('1.1', 400, 'Bad request', [], new InMemoryStream, $request));
+            }
+        };
 
-        $client = new AcmeClient(getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey(), null, $http);
+        $httpClient = (new HttpClientBuilder)
+            ->intercept($interceptor)
+            ->build();
+
+        $client = new AcmeClient(
+            \getenv('BOULDER_HOST') . '/directory',
+            (new RsaKeyGenerator())->generateKey(),
+            null,
+            $httpClient
+        );
 
         Promise\wait($client->get(AcmeResource::NEW_ACCOUNT));
     }
@@ -156,21 +176,35 @@ class AcmeClientTest extends TestCase {
     /**
      * @test
      * @depends boulderConfigured
-     * @expectedException \Kelunik\Acme\AcmeException
-     * @expectedExceptionMessage Could not obtain directory: Invalid directory response: Foobar
      */
-    public function failsWithInvalidDirectoryResponseButCorrectErrorResponse() {
-        $response = $this->getMockBuilder(Response::class)->getMock();
-        $response->method('getStatus')->willReturn(400);
-        $response->method('getBody')->willReturn(new Message(new InMemoryStream(json_encode([
-            'type' => 'acme:error:foo',
-            'detail' => 'Foobar',
-        ]))));
+    public function failsWithInvalidDirectoryResponseButCorrectErrorResponse(): void
+    {
+        $this->expectException(AcmeException::class);
+        $this->expectExceptionMessage('Could not obtain directory: Invalid directory response: Foobar');
 
-        $http = $this->getMockBuilder(Client::class)->getMock();
-        $http->method('request')->willReturn(new Success($response));
+        $interceptor = new class implements ApplicationInterceptor {
+            public function request(
+                Request $request,
+                CancellationToken $cancellation,
+                DelegateHttpClient $httpClient
+            ): Promise {
+                return new Success(new Response('1.1', 400, 'Bad request', [], new InMemoryStream(\json_encode([
+                    'type' => 'acme:error:foo',
+                    'detail' => 'Foobar',
+                ])), $request));
+            }
+        };
 
-        $client = new AcmeClient(getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey(), null, $http);
+        $httpClient = (new HttpClientBuilder)
+            ->intercept($interceptor)
+            ->build();
+
+        $client = new AcmeClient(
+            \getenv('BOULDER_HOST') . '/directory',
+            (new RsaKeyGenerator())->generateKey(),
+            null,
+            $httpClient
+        );
 
         Promise\wait($client->get(AcmeResource::NEW_ACCOUNT));
     }
@@ -178,30 +212,38 @@ class AcmeClientTest extends TestCase {
     /**
      * @test
      * @depends boulderConfigured
-     * @expectedException \Kelunik\Acme\AcmeException
-     * @expectedExceptionMessage too many errors (last code: 400)
      */
-    public function failsWithTooManyBadNonceErrors() {
-        $mockResponse = $this->getMockBuilder(Response::class)->getMock();
-        $mockResponse->method('getStatus')->willReturn(400);
-        $mockResponse->method('getBody')->willReturn(new Message(new InMemoryStream(json_encode([
-            'type' => 'acme:error:badNonce',
-        ]))));
+    public function failsWithTooManyBadNonceErrors(): void
+    {
+        $this->expectException(AcmeException::class);
+        $this->expectExceptionMessage('too many errors (last code: 400)');
 
-        $http = $this->getMockBuilder(Client::class)->getMock();
-        $http->method('request')->willReturnCallback(function ($request) use ($mockResponse) {
-            if (!$request instanceof Request) {
-                $request = new Request($request);
+        $interceptor = new class implements ApplicationInterceptor {
+            public function request(
+                Request $request,
+                CancellationToken $cancellation,
+                DelegateHttpClient $httpClient
+            ): Promise {
+                if ($request->getMethod() === 'POST') {
+                    return new Success(new Response('1.1', 400, 'Bad request', [], new InMemoryStream(\json_encode([
+                        'type' => 'acme:error:badNonce',
+                    ])), $request));
+                }
+
+                return $httpClient->request($request, $cancellation);
             }
+        };
 
-            if ($request->getMethod() === 'POST') {
-                return new Success($mockResponse);
-            }
+        $httpClient = (new HttpClientBuilder)
+            ->intercept($interceptor)
+            ->build();
 
-            return (new DefaultClient)->request($request);
-        });
-
-        $client = new AcmeClient(getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey(), null, $http);
+        $client = new AcmeClient(
+            \getenv('BOULDER_HOST') . '/directory',
+            (new RsaKeyGenerator())->generateKey(),
+            null,
+            $httpClient
+        );
 
         Promise\wait($client->post(AcmeResource::NEW_ACCOUNT, []));
     }
@@ -210,34 +252,41 @@ class AcmeClientTest extends TestCase {
      * @test
      * @depends boulderConfigured
      */
-    public function succeedsWithOneBadNonceError() {
-        $encounteredBadNonceError = false;
+    public function succeedsWithOneBadNonceError(): void
+    {
+        $interceptor = new class implements ApplicationInterceptor {
+            public $encounteredBadNonceError = false;
 
-        $mockResponse = $this->getMockBuilder(Response::class)->getMock();
-        $mockResponse->method('getStatus')->willReturn(400);
-        $mockResponse->method('getBody')->willReturn(new Message(new InMemoryStream(json_encode([
-            'type' => 'acme:error:badNonce',
-        ]))));
+            public function request(
+                Request $request,
+                CancellationToken $cancellation,
+                DelegateHttpClient $httpClient
+            ): Promise {
+                if (!$this->encounteredBadNonceError) {
+                    $this->encounteredBadNonceError = true;
 
-        $http = $this->getMockBuilder(Client::class)->getMock();
-        $http->method('request')->willReturnCallback(coroutine(function ($request) use ($http, $mockResponse, &$encounteredBadNonceError) {
-            if (!$request instanceof Request) {
-                $request = new Request($request);
+                    return new Success(new Response('1.1', 400, 'Bad request', [], new InMemoryStream(\json_encode([
+                        'type' => 'acme:error:badNonce',
+                    ])), $request));
+                }
+
+                return $httpClient->request($request, $cancellation);
             }
+        };
 
-            if (!$encounteredBadNonceError && $request->getMethod() === 'POST') {
-                $encounteredBadNonceError = true;
+        $httpClient = (new HttpClientBuilder)
+            ->intercept($interceptor)
+            ->build();
 
-                return new Success($mockResponse);
-            }
-
-            return (new DefaultClient)->request($request);
-        }));
-
-        $client = new AcmeClient(getenv('BOULDER_HOST') . '/directory', (new RsaKeyGenerator())->generateKey(), null, $http);
+        $client = new AcmeClient(
+            \getenv('BOULDER_HOST') . '/directory',
+            (new RsaKeyGenerator())->generateKey(),
+            null,
+            $httpClient
+        );
 
         Promise\wait($client->post(AcmeResource::NEW_ACCOUNT, []));
 
-        $this->assertTrue($encounteredBadNonceError);
+        $this->assertTrue($interceptor->encounteredBadNonceError);
     }
 }

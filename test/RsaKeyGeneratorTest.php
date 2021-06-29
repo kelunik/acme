@@ -6,27 +6,32 @@ use Kelunik\Acme\Crypto\KeyGenerator;
 use Kelunik\Acme\Crypto\RsaKeyGenerator;
 use PHPUnit\Framework\TestCase;
 
-class RsaKeyGeneratorTest extends TestCase {
+class RsaKeyGeneratorTest extends TestCase
+{
     /** @var KeyGenerator */
     private $generator;
 
-    public function setUp() {
+    public function setUp(): void
+    {
         $this->generator = new RsaKeyGenerator;
     }
 
     /**
      * @test
-     * @expectedException \Error
      */
-    public function failsWithLessThan2048Bits() {
+    public function failsWithLessThan2048Bits(): void
+    {
+        $this->expectException(\Error::class);
+
         new RsaKeyGenerator(2047);
     }
 
     /**
      * @test
      */
-    public function succeedsOtherwise() {
+    public function succeedsOtherwise(): void
+    {
         $key = $this->generator->generateKey();
-        $this->assertInternalType('string', $key->toPem());
+        $this->assertIsString($key->toPem());
     }
 }
