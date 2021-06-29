@@ -120,7 +120,7 @@ class AcmeService
      *
      * @param string $location
      *
-     * @return \Amp\Promise
+     * @return Promise
      */
     public function getOrder(string $location): Promise
     {
@@ -206,7 +206,7 @@ class AcmeService
      *
      * @param string $location
      *
-     * @return \Amp\Promise
+     * @return Promise
      */
     public function getAuthorization(string $location): Promise
     {
@@ -402,9 +402,7 @@ class AcmeService
 
                     return $certificates;
                 }
-            } while (1);
-
-            throw new AcmeException("Couldn't fetch certificate");
+            } while (true);
         });
     }
 

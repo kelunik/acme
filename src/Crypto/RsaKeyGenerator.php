@@ -46,7 +46,7 @@ class RsaKeyGenerator implements KeyGenerator
             $configFile = \tempnam(\sys_get_temp_dir(), 'acme_openssl_');
             \file_put_contents($configFile, $configContent);
 
-            \register_shutdown_function(function () use ($configFile) {
+            \register_shutdown_function(static function () use ($configFile) {
                 @\unlink($configFile);
             });
         }

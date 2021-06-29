@@ -9,7 +9,6 @@
 
 namespace Kelunik\Acme;
 
-use Amp\Delayed;
 use Amp\Failure;
 use Amp\Http\Client\HttpClient;
 use Amp\Http\Client\HttpClientBuilder;
@@ -26,6 +25,7 @@ use Psr\Log\LoggerInterface as PsrLogger;
 use Psr\Log\NullLogger;
 use Throwable;
 use function Amp\call;
+use function Amp\delay;
 
 /**
  * Low level ACME client.
@@ -201,9 +201,9 @@ final class AcmeClient
                     $this->saveNonce($response);
 
                     if ($statusCode === 400) {
-                        $info = \json_decode($body);
+                        $info = \json_decode($body, true);
 
-                        if (!empty($info->type) && (\strpos($info->type, "acme:error:badNonce") !== false)) {
+                        if (!empty($info['type']) && (\strpos($info['type'], "acme:error:badNonce") !== false)) {
                             $this->nonces = [];
                             continue;
                         }
@@ -212,7 +212,7 @@ final class AcmeClient
                          * Hit rate limit.
                          * @{link} https://letsencrypt.org/docs/rate-limits/
                          */
-                        yield new Delayed(1000);
+                        yield delay(1000);
                         continue;
                     }
                 } catch (Throwable $e) {

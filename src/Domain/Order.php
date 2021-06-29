@@ -99,7 +99,7 @@ class Order extends AcmeResponse
      * @param string|null  $notBefore
      * @param string|null  $notAfter
      *
-     * @throws \Kelunik\Acme\AcmeException
+     * @throws AcmeException
      */
     public function __construct(
         string $location,
@@ -119,7 +119,7 @@ class Order extends AcmeResponse
         $this->finalize = $finalize;
 
         $this->expires = $expires;
-        if (empty($expires) && \in_array($status, [OrderStatus::PENDING, OrderStatus::VALID])) {
+        if (empty($expires) && \in_array($status, [OrderStatus::PENDING, OrderStatus::VALID], true)) {
             throw new AcmeException("Expires field is mandatory when order status is `pending` or `valid`");
         }
 
@@ -159,22 +159,22 @@ class Order extends AcmeResponse
         return $this->finalize;
     }
 
-    public function getExpires()
+    public function getExpires(): ?string
     {
         return $this->expires;
     }
 
-    public function getCertificate()
+    public function getCertificate(): ?string
     {
         return $this->certificate;
     }
 
-    public function getNotBefore()
+    public function getNotBefore(): ?string
     {
         return $this->notBefore;
     }
 
-    public function getNotAfter()
+    public function getNotAfter(): ?string
     {
         return $this->notAfter;
     }
