@@ -13,5 +13,5 @@ use Kelunik\Acme\Crypto\PrivateKey;
 
 interface Backend {
     public function toJwk(PrivateKey $privateKey): array;
-    public function signJwt(PrivateKey $privateKey, string $nonce, array $payload): string;
+    public function signJwt(PrivateKey $privateKey, string $nonce, array $payload, string $accountUrl = null): string;
 }
