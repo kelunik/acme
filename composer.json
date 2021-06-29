@@ -19,10 +19,10 @@
     ],
     "autoload": {
         "psr-4": {
-            "Kelunik\\Acme\\": "lib"
+            "Kelunik\\Acme\\": "src"
         },
         "files": [
-            "lib/functions.php"
+            "src/functions.php"
         ]
     },
     "require": {
