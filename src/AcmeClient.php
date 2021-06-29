@@ -125,10 +125,10 @@ final class AcmeClient
 
             try {
                 /** @var Response $response */
-                $response = yield $this->httpClient->request($url);
+                $response = yield $this->httpClient->request(new Request($url));
 
                 // We just buffer the body here, so no further I/O will happen once this method's promise resolves.
-                $body = yield $response->getBody();
+                $body = yield $response->getBody()->buffer();
 
                 $this->logger->debug('Request for {url} via GET has been processed with status {status}: {body}', [
                     'url' => $url,
@@ -187,6 +187,10 @@ final class AcmeClient
                 ]);
 
                 try {
+                    if ($request->getMethod() === 'POST') {
+                        $request->setHeader('content-type', 'application/jose+json');
+                    }
+
                     /** @var Response $response */
                     $response = yield $this->httpClient->request($request);
                     $statusCode = $response->getStatus();
@@ -231,7 +235,6 @@ final class AcmeClient
     {
         return (new HttpClientBuilder)
             ->intercept(new AddRequestHeader('user-agent', 'kelunik/acme'))
-            ->intercept(new AddRequestHeader('content-type', 'application/jose+json'))
             ->build();
     }
 

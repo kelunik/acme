@@ -2,12 +2,16 @@
 
 namespace Kelunik\Acme;
 
+use Amp\Http\Client\Connection\DefaultConnectionFactory;
+use Amp\Http\Client\Connection\UnlimitedConnectionPool;
+use Amp\Http\Client\HttpClientBuilder;
+use Amp\PHPUnit\AsyncTestCase;
+use Amp\Socket\ClientTlsContext;
+use Amp\Socket\ConnectContext;
 use Kelunik\Acme\Crypto\RsaKeyGenerator;
 use Kelunik\Acme\Domain\Registration;
-use PHPUnit\Framework\TestCase;
-use function Amp\Promise\wait;
 
-class AcmeServiceTest extends TestCase
+class AcmeServiceTest extends AsyncTestCase
 {
     /**
      * @var AcmeService
@@ -16,37 +20,46 @@ class AcmeServiceTest extends TestCase
 
     public function setUp(): void
     {
+        parent::setUp();
+
         if (\getenv('BOULDER_HOST') === false) {
             $this->markTestSkipped('No Boulder host set. Set the environment variable BOULDER_HOST to enable those tests.');
         }
 
+        $httpPool = new UnlimitedConnectionPool(new DefaultConnectionFactory(null,
+            (new ConnectContext)->withTlsContext((new ClientTlsContext(''))->withoutPeerVerification())));
+
+        $httpClient = (new HttpClientBuilder)
+            ->usingPool($httpPool)
+            ->build();
+
         $key = (new RsaKeyGenerator)->generateKey();
-        $client = new AcmeClient(\getenv('BOULDER_HOST') . '/directory', $key);
+        $client = new AcmeClient(\getenv('BOULDER_HOST') . '/dir', $key, null, $httpClient);
         $this->acme = new AcmeService($client);
     }
 
     /**
      * @test
      */
-    public function registerNotAgreeTOS(): void
+    public function registerNotAgreeTOS(): \Generator
     {
         $this->expectException(AcmeException::class);
-        $this->expectExceptionMessage('must agree to terms of service');
+        $this->expectExceptionMessage('Provided account did not agree to the terms of service');
 
         /** @var Registration $registration */
-        wait($this->acme->register('me@example.com'));
+        yield $this->acme->register('me@example.com');
     }
 
     /**
      * @test
      */
-    public function registerAndReRegisterGivesSameLocation(): void
+    public function registerAndReRegisterGivesSameLocation(): \Generator
     {
-        $registration = wait($this->acme->register('me@example.com'));
+        $registration = yield $this->acme->register('me@example.com', true);
         $this->assertSame(['mailto:me@example.com'], $registration->getContact());
         $this->assertNotNull($l1 = $registration->getLocation());
 
-        $registration = wait($this->acme->register('me@example.com'));
+        $registration = yield $this->acme->register('me@example.com', true);
         $this->assertSame(['mailto:me@example.com'], $registration->getContact());
         $this->assertNotNull($l2 = $registration->getLocation());
 
