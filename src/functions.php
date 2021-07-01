@@ -9,8 +9,11 @@
 
 namespace Kelunik\Acme;
 
+use Assert\Assert;
 use Kelunik\Acme\Crypto\Backend\Backend;
 use Kelunik\Acme\Crypto\PrivateKey;
+use League\Uri\Http;
+use Psr\Http\Message\UriInterface;
 
 /**
  * Generates the a key authorization, which must be provided in challenges, e.g. directly in HTTP-01
@@ -52,4 +55,25 @@ function generateDns01Payload(string $keyAuthorization): string
 function base64UrlEncode(string $payload): string
 {
     return \rtrim(\strtr(\base64_encode($payload), '+/', '-_'), '=');
+}
+
+function parseDate(?string $date): ?\DateTimeImmutable
+{
+    if ($date === null) {
+        return null;
+    }
+
+    return \DateTimeImmutable::createFromFormat('Y-m-d\TH:i:s.uP', $date);
+}
+
+function formatDate(\DateTimeInterface $date): string
+{
+    return $date->format('Y-m-d\TH:i:s.uP');
+}
+
+function parseUrl(?string $url): UriInterface
+{
+    Assert::that($url)->url();
+
+    return Http::createFromString($url);
 }

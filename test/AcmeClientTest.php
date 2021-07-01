@@ -32,8 +32,10 @@ class AcmeClientTest extends AsyncTestCase
     {
         parent::setUp();
 
-        $this->httpPool = new UnlimitedConnectionPool(new DefaultConnectionFactory(null,
-            (new ConnectContext)->withTlsContext((new ClientTlsContext(''))->withoutPeerVerification())));
+        $this->httpPool = new UnlimitedConnectionPool(new DefaultConnectionFactory(
+            null,
+            (new ConnectContext)->withTlsContext((new ClientTlsContext(''))->withoutPeerVerification())
+        ));
     }
 
     /**
@@ -57,8 +59,12 @@ class AcmeClientTest extends AsyncTestCase
         $this->expectException(AcmeException::class);
         $this->expectDeprecationMessage('Resource not found in directory');
 
-        $client = new AcmeClient(\getenv('BOULDER_HOST') . '/dir', (new RsaKeyGenerator())->generateKey(), null,
-            (new HttpClientBuilder)->usingPool($this->httpPool)->build());
+        $client = new AcmeClient(
+            \getenv('BOULDER_HOST') . '/dir',
+            (new RsaKeyGenerator())->generateKey(),
+            null,
+            (new HttpClientBuilder)->usingPool($this->httpPool)->build()
+        );
         yield $client->post('foobar', []);
     }
 
@@ -68,8 +74,12 @@ class AcmeClientTest extends AsyncTestCase
      */
     public function canFetchDirectory(): \Generator
     {
-        $client = new AcmeClient(\getenv('BOULDER_HOST') . '/dir', (new RsaKeyGenerator())->generateKey(), null,
-            (new HttpClientBuilder)->usingPool($this->httpPool)->build());
+        $client = new AcmeClient(
+            \getenv('BOULDER_HOST') . '/dir',
+            (new RsaKeyGenerator())->generateKey(),
+            null,
+            (new HttpClientBuilder)->usingPool($this->httpPool)->build()
+        );
 
         /** @var Response $response */
         $response = yield $client->get(\getenv('BOULDER_HOST') . '/dir');
@@ -80,7 +90,10 @@ class AcmeClientTest extends AsyncTestCase
 
         $acmeResources = (new ReflectionClass(AcmeResource::class))->getConstants();
         foreach ($acmeResources as $acmeResource) {
-            $this->assertArrayHasKey($acmeResource, $data);
+            // newAuthz is optional
+            if ($acmeResource !== AcmeResource::NEW_AUTHORIZATION) {
+                $this->assertArrayHasKey($acmeResource, $data);
+            }
         }
     }
 
@@ -90,8 +103,12 @@ class AcmeClientTest extends AsyncTestCase
      */
     public function fetchesNonceWhenNoneAvailable(): \Generator
     {
-        $client = new AcmeClient(\getenv('BOULDER_HOST') . '/dir', (new RsaKeyGenerator())->generateKey(), null,
-            (new HttpClientBuilder)->usingPool($this->httpPool)->build());
+        $client = new AcmeClient(
+            \getenv('BOULDER_HOST') . '/dir',
+            (new RsaKeyGenerator())->generateKey(),
+            null,
+            (new HttpClientBuilder)->usingPool($this->httpPool)->build()
+        );
 
         yield $client->post(\getenv('BOULDER_HOST') . '/acme/new-acct', []);
         $this->addToAssertionCount(1);
@@ -106,8 +123,12 @@ class AcmeClientTest extends AsyncTestCase
         $this->expectException(AcmeException::class);
         $this->expectExceptionMessageMatches('~POST request to .* failed~');
 
-        $client = new AcmeClient(\getenv('BOULDER_HOST') . '/dir', (new RsaKeyGenerator())->generateKey(), null,
-            (new HttpClientBuilder)->usingPool($this->httpPool)->build());
+        $client = new AcmeClient(
+            \getenv('BOULDER_HOST') . '/dir',
+            (new RsaKeyGenerator())->generateKey(),
+            null,
+            (new HttpClientBuilder)->usingPool($this->httpPool)->build()
+        );
 
         // mute because of stream_socket_enable_crypto(): SSL: Connection refused warning
         @yield $client->post('https://127.0.0.1:444/', []);
@@ -127,8 +148,12 @@ class AcmeClientTest extends AsyncTestCase
 
         resolver($resolver);
 
-        $client = new AcmeClient(\getenv('BOULDER_HOST') . '/dir', (new RsaKeyGenerator())->generateKey(), null,
-            (new HttpClientBuilder)->usingPool($this->httpPool)->build());
+        $client = new AcmeClient(
+            \getenv('BOULDER_HOST') . '/dir',
+            (new RsaKeyGenerator())->generateKey(),
+            null,
+            (new HttpClientBuilder)->usingPool($this->httpPool)->build()
+        );
 
         yield $client->get('https://localhost:4000/');
     }

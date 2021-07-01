@@ -9,16 +9,18 @@
 
 namespace Kelunik\Acme;
 
-use Amp\Delayed;
 use Amp\Http\Client\Response;
 use Amp\Promise;
 use InvalidArgumentException;
-use Kelunik\Acme\Domain\Authorization;
-use Kelunik\Acme\Domain\Challenge;
-use Kelunik\Acme\Domain\Order;
-use Kelunik\Acme\Domain\Registration;
+use Kelunik\Acme\Protocol\Account;
+use Kelunik\Acme\Protocol\Authorization;
+use Kelunik\Acme\Protocol\Challenge;
+use Kelunik\Acme\Protocol\ChallengeStatus;
+use Kelunik\Acme\Protocol\Order;
 use Kelunik\Certificate\Certificate;
+use Psr\Http\Message\UriInterface;
 use function Amp\call;
+use function Amp\delay;
 use function Sabre\Uri\resolve;
 
 /**
@@ -32,18 +34,11 @@ class AcmeService
     /**
      * @var AcmeClient low level ACME client
      */
-    private $acmeClient;
+    private AcmeClient $client;
 
-    /**
-     * AcmeService constructor.
-     *
-     * @param AcmeClient $acmeClient ACME client
-     *
-     * @api
-     */
-    public function __construct(AcmeClient $acmeClient)
+    public function __construct(AcmeClient $client)
     {
-        $this->acmeClient = $acmeClient;
+        $this->client = $client;
     }
 
     /**
@@ -52,63 +47,23 @@ class AcmeService
      * @param string $email e-mail address for contact
      * @param bool   $agreement
      *
-     * @return Promise resolves to a Registration object
-     * @throws AcmeException If something went wrong.
+     * @return Promise<Account>
      *
-     * @api
+     * @see https://datatracker.ietf.org/doc/html/rfc8555#section-7.3
      */
     public function register(string $email, bool $agreement = false): Promise
     {
         return call(function () use ($email, $agreement) {
-            $payload = [
+            /** @var Response $response */
+            $response = yield $this->client->post(AcmeResource::NEW_ACCOUNT, [
                 'termsOfServiceAgreed' => $agreement,
                 'contact' => [
                     "mailto:{$email}",
                 ],
-            ];
+            ]);
 
-            /** @var Response $response */
-            $response = yield $this->acmeClient->post(AcmeResource::NEW_ACCOUNT, $payload);
-
-            if (\in_array($response->getStatus(), [200, 201])) {
-                if (!$response->hasHeader('location')) {
-                    throw new AcmeException('Protocol Violation: No Location Header');
-                }
-
-                $location = $response->getHeader('location');
-
-                $payload = \json_decode(yield $response->getBody()->buffer());
-
-                if ($response->hasHeader('link')) {
-                    $links = $response->getHeaderArray('link');
-
-                    foreach ($links as $link) {
-                        if (\preg_match('#<(.*?)>;rel="terms-of-service"#x', $link, $match)) {
-                            $uri = resolve($response->getRequest()->getUri(), $match[1]);
-                            return $this->register($email, $uri);
-                        }
-                    }
-                }
-                return new Registration($location, $payload->status, $payload->contact, $payload->orders ?? null);
-            }
-
-            if ($response->getStatus() === 409) {
-                if (!$response->hasHeader('location')) {
-                    throw new AcmeException("Protocol violation: 409 Conflict. Response didn't carry any location header.");
-                }
-                $location = $response->getHeader('location');
-
-                $payload = [
-                    'termsOfServiceAgreed' => $agreement,
-                    'contact' => [
-                        "mailto:{$email}",
-                    ],
-                ];
-
-                $response = yield $this->acmeClient->post($location, $payload);
-                $payload = \json_decode(yield $response->getBody()->buffer());
-
-                return new Registration($location, $payload->status, $payload->contact, $payload->orders ?? null);
+            if (\in_array($response->getStatus(), [200, 201], true)) {
+                return Account::fromResponse($response->getHeader('location'), yield $response->getBody()->buffer());
             }
 
             throw $this->generateException($response, yield $response->getBody()->buffer());
@@ -117,22 +72,17 @@ class AcmeService
 
     /**
      * Retrieves existing order using the order's location URL.
-     *
-     * @param string $location
-     *
-     * @return Promise
      */
-    public function getOrder(string $location): Promise
+    public function getOrder(UriInterface $url): Promise
     {
-        return call(function () use ($location) {
+        return call(function () use ($url) {
             /** @var Response $response */
-            $response = yield $this->acmeClient->post($location, []);
+            $response = yield $this->client->post($url, []);
 
-            if (\in_array($response->getStatus(), [200, 201])) {
-                $payload = \json_decode(yield $response->getBody()->buffer());
-                $payload->location = $location;
-                return Order::fromResponse($payload);
+            if ($response->getStatus() === 200) {
+                return Order::fromResponse($url, yield $response->getBody()->buffer());
             }
+
             throw $this->generateException($response, yield $response->getBody()->buffer());
         });
     }
@@ -140,35 +90,41 @@ class AcmeService
     /**
      * Submit a new order for the given DNS names.
      *
-     * @param string[] $dns DNS names to request order for
+     * @param string[]                $domainNames DNS names to request order for
+     * @param \DateTimeInterface|null $notBefore The requested value of the notBefore field in the certificate
+     * @param \DateTimeInterface|null $notAfter The requested value of the notAfter field in the certificate
      *
-     * @return Promise resolves to an Order object
-     * @throws AcmeException If something went wrong.
-     * @api
-     *
+     * @return Promise<Order>
      */
-    public function newOrder(array $dns): Promise
-    {
-        return call(function () use ($dns) {
+    public function newOrder(
+        array $domainNames,
+        ?\DateTimeInterface $notBefore = null,
+        ?\DateTimeInterface $notAfter = null
+    ): Promise {
+        return call(function () use ($domainNames, $notBefore, $notAfter) {
+            $request = [
+                'identifiers' => [],
+            ];
+
+            foreach ($domainNames as $domainName) {
+                $request['identifiers'][] = ['type' => 'dns', 'value' => $domainName];
+            }
+
+            if ($notBefore) {
+                $request['notBefore'] = formatDate($notBefore);
+            }
+
+            if ($notAfter) {
+                $request['notAfter'] = formatDate($notAfter);
+            }
+
             /** @var Response $response */
+            $response = yield $this->client->post(AcmeResource::NEW_ORDER, $request);
 
-            $identifiers = [];
-            foreach ($dns as $dnsName) {
-                $identifiers[] = ['type' => 'dns', 'value' => $dnsName];
+            if ($response->getStatus() === 201) {
+                return Order::fromResponse($response->getHeader('location'), yield $response->getBody()->buffer());
             }
-            $response = yield $this->acmeClient->post(AcmeResource::NEW_ORDER, [
-                'identifiers' => $identifiers,
-            ]);
 
-            if (\in_array($response->getStatus(), [200, 201])) {
-                if (!$response->hasHeader('location')) {
-                    throw new AcmeException('Protocol Violation: No Location Header');
-                }
-
-                $payload = \json_decode(yield $response->getBody()->buffer());
-                $payload->location = $response->getHeader('location');
-                return Order::fromResponse($payload);
-            }
             throw $this->generateException($response, yield $response->getBody()->buffer());
         });
     }
@@ -176,25 +132,18 @@ class AcmeService
     /**
      * Answers a challenge and signals that the CA should validate it.
      *
-     * @param string $location URI of the challenge
-     * @param string $keyAuth key authorization
+     * @param UriInterface $url URI of the challenge
      *
-     * @return Promise resolves to the decoded JSON response
-     * @throws AcmeException If something went wrong.
-     * @api
-     *
+     * @return Promise<Challenge>
      */
-    public function answerChallenge(string $location, string $keyAuth): Promise
+    public function answerChallenge(UriInterface $url): Promise
     {
-        return call(function () use ($location, $keyAuth) {
+        return call(function () use ($url) {
             /** @var Response $response */
-            $response = yield $this->acmeClient->post($location, [
-                'keyAuthorization' => $keyAuth,
-            ]);
+            $response = yield $this->client->post($url, []);
 
             try {
-                $payload = \json_decode(yield $response->getBody()->buffer());
-                return Challenge::fromResponse($payload);
+                return Challenge::fromResponse(yield $response->getBody()->buffer());
             } catch (\Throwable $_) {
                 throw $this->generateException($response, yield $response->getBody()->buffer());
             }
@@ -202,21 +151,41 @@ class AcmeService
     }
 
     /**
-     * Gets the authorization given a challenge-URL.
+     * Gets the authorization.
      *
-     * @param string $location
+     * @param UriInterface $url
      *
-     * @return Promise
+     * @return Promise<Authorization>
      */
-    public function getAuthorization(string $location): Promise
+    public function getAuthorization(UriInterface $url): Promise
     {
-        return call(function () use ($location) {
+        return call(function () use ($url) {
             /** @var Response $response */
-            $response = yield $this->acmeClient->post($location, []);
+            $response = yield $this->client->post($url, []);
 
             try {
-                $data = \json_decode(yield $response->getBody()->buffer());
-                return Authorization::fromResponse($data);
+                return Authorization::fromResponse(yield $response->getBody()->buffer());
+            } catch (\Throwable $_) {
+                throw $this->generateException($response, yield $response->getBody()->buffer());
+            }
+        });
+    }
+
+    /**
+     * Gets the challenge.
+     *
+     * @param UriInterface $url
+     *
+     * @return Promise<Challenge>
+     */
+    public function getChallenge(UriInterface $url): Promise
+    {
+        return call(function () use ($url) {
+            /** @var Response $response */
+            $response = yield $this->client->post($url, []);
+
+            try {
+                return Challenge::fromResponse(yield $response->getBody()->buffer());
             } catch (\Throwable $_) {
                 throw $this->generateException($response, yield $response->getBody()->buffer());
             }
@@ -226,92 +195,61 @@ class AcmeService
     /**
      * Polls until a challenge has been validated.
      *
-     * @param string $location URI of the challenge
+     * @param UriInterface $url URI of the challenge
      *
-     * @return Promise resolves to null
-     * @throws AcmeException
-     * @api
-     *
+     * @return Promise<void>
      */
-    public function pollForChallenge(string $location): Promise
+    public function pollForChallenge(UriInterface $url): Promise
     {
-        return call(function () use ($location) {
+        return call(function () use ($url) {
             do {
-                /** @var Response $response */
-                $response = yield $this->acmeClient->post($location, []);
-                $body = yield $response->getBody()->buffer();
-                $data = \json_decode($body);
+                /** @var Challenge $challenge */
+                $challenge = yield $this->getChallenge($url);
 
-                if ($data->status === 'pending') {
-                    if (!$response->hasHeader('retry-after')) {
-                        // throw new AcmeException("Protocol Violation: No Retry-After Header!");
-
-                        yield new Delayed(1000);
-                        continue;
-                    }
-
-                    $waitTime = $this->parseRetryAfter($response->getHeader('retry-after'));
-                    $waitTime = \max($waitTime, 1);
-
-                    yield new Delayed($waitTime * 1000);
-                    continue;
+                if ($challenge->getStatus() === ChallengeStatus::INVALID) {
+                    // TODO Use Challenge->getError
+                    throw new AcmeException('Challenge marked as invalid.');
                 }
 
-                if ($data->status === 'invalid') {
-                    $errors = [];
-
-                    foreach ($data->errors ?? [] as $error) {
-                        $message = $error->title ?? '???';
-
-                        if ($error->detail ?? '') {
-                            $message .= ' (' . $error->detail . ')';
-                        }
-
-                        $errors[] = $message;
-                    }
-
-                    throw new AcmeException('Challenge marked as invalid: ' . ($errors ? \implode(
-                        ', ',
-                        $errors
-                    ) : ('Unknown error: ' . $body)));
-                }
-
-                if ($data->status === 'valid') {
+                if ($challenge->getStatus() === ChallengeStatus::VALID) {
                     break;
                 }
 
-                throw new AcmeException("Invalid challenge status: {$data->status}.");
-            } while (1);
+                // TODO
+                // if (!$response->hasHeader('retry-after')) {
+                yield delay(1000);
+                // } else {
+                //     $waitTime = $this->parseRetryAfter($response->getHeader('retry-after'));
+                //     $waitTime = \max($waitTime, 1);
+//
+                //     yield delay($waitTime * 1000);
+                // }
+            } while (true);
         });
     }
 
     /**
      * Requests a new certificate. This will be done with the finalize URL which is created upon order creation.
      *
-     * @param string $csr certificate signing request
+     * @param UriInterface $url
+     * @param string       $csr certificate signing request
      *
-     * @param string $location
-     *
-     * @return Promise resolves to the URI where the certificate will be provided
-     * @api
-     *
+     * @return Promise<Order>
      */
-    public function finalizeOrder(string $location, string $csr): Promise
+    public function finalizeOrder(UriInterface $url, string $csr): Promise
     {
-        return call(function () use ($location, $csr) {
+        return call(function () use ($url, $csr) {
             $begin = 'REQUEST-----';
             $end = '----END';
 
-            $beginPos = \strpos($csr, $begin) + \strlen($begin);
-
+            $beginPos = \strpos($csr, $begin);
             if ($beginPos === false) {
                 throw new InvalidArgumentException("Invalid CSR, maybe not in PEM format?\n{$csr}");
             }
 
-            $csr = \substr($csr, $beginPos);
+            $csr = \substr($csr, $beginPos + \strlen($begin));
 
             $endPos = \strpos($csr, $end);
-
             if ($endPos === false) {
                 throw new InvalidArgumentException("Invalid CSR, maybe not in PEM format?\n{$csr}");
             }
@@ -319,18 +257,12 @@ class AcmeService
             $csr = \substr($csr, 0, $endPos);
 
             /** @var Response $response */
-            $response = yield $this->acmeClient->post($location, [
+            $response = yield $this->client->post($url, [
                 'csr' => base64UrlEncode(\base64_decode($csr)),
             ]);
 
             if ($response->getStatus() === 200) {
-                if (!$response->hasHeader('location')) {
-                    throw new AcmeException('Protocol Violation: No Location Header');
-                }
-
-                $payload = \json_decode(yield $response->getBody()->buffer());
-                $payload->location = $response->getHeader('location');
-                return Order::fromResponse($payload);
+                return Order::fromResponse($response->getHeader('location'), yield $response->getBody()->buffer());
             }
 
             throw $this->generateException($response, yield $response->getBody()->buffer());
@@ -340,32 +272,29 @@ class AcmeService
     /**
      * Polls for a certificate.
      *
-     * @param string $location URI of the certificate
+     * @param UriInterface $url URI of the certificate
      *
-     * @return Promise resolves to the complete certificate chain as array of PEM encoded certificates
-     * @throws AcmeException If something went wrong.
-     * @api
-     *
+     * @return Promise Complete certificate chain as array of PEM encoded certificates
      */
-    public function pollForCertificate(string $location): Promise
+    public function pollForCertificate(UriInterface $url): Promise
     {
-        return call(function () use ($location) {
+        return call(function () use ($url) {
             do {
                 /** @var Response $response */
-                $response = yield $this->acmeClient->post($location, []);
+                $response = yield $this->client->post($url, []);
 
                 if ($response->getStatus() === 202) {
                     if (!$response->hasHeader('retry-after')) {
                         // throw new AcmeException("Protocol Violation: No Retry-After Header!");
 
-                        yield new Delayed(1000);
+                        yield delay(1000);
                         continue;
                     }
 
                     $waitTime = $this->parseRetryAfter($response->getHeader('retry-after'));
                     $waitTime = \min(\max($waitTime, 2), 60);
 
-                    yield new Delayed($waitTime * 1000);
+                    yield delay($waitTime * 1000);
                     continue;
                 }
 
@@ -380,12 +309,13 @@ class AcmeService
                     while ($response->hasHeader('link')) {
                         $links = $response->getHeaderArray('link');
                         $hasUplink = false;
+
                         foreach ($links as $link) {
                             if (\preg_match('#<(.*?)>;rel="up"#x', $link, $match)) {
                                 $url = resolve($response->getRequest()->getUri(), $match[1]);
 
                                 /** @var Response $response */
-                                $response = yield $this->acmeClient->post($url, []);
+                                $response = yield $this->client->post($url, []);
                                 $certificates[] = yield $response->getBody()->buffer();
                                 $hasUplink = true;
                             }
@@ -411,23 +341,18 @@ class AcmeService
      *
      * @param string $pem PEM encoded certificate
      *
-     * @return Promise resolves to true
-     * @throws AcmeException If something went wrong.
-     * @api
-     *
+     * @return Promise<void>
      */
     public function revokeCertificate(string $pem): Promise
     {
         return call(function () use ($pem) {
-            $der = Certificate::pemToDer($pem);
-
             /** @var Response $response */
-            $response = yield $this->acmeClient->post(AcmeResource::REVOKE_CERTIFICATE, [
-                'certificate' => \strtr(\rtrim(\base64_encode($der), '='), '-/', '+_'),
+            $response = yield $this->client->post(AcmeResource::REVOKE_CERTIFICATE, [
+                'certificate' => base64UrlEncode(Certificate::pemToDer($pem)),
             ]);
 
             if ($response->getStatus() === 200) {
-                return true;
+                return;
             }
 
             throw $this->generateException($response, yield $response->getBody()->buffer());

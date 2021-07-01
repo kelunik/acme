@@ -2,12 +2,12 @@
 
 namespace Kelunik\Acme;
 
-use Kelunik\Acme\Domain\Authorization;
-use Kelunik\Acme\Domain\Challenge;
-use Kelunik\Acme\Domain\Identifier;
-use Kelunik\Acme\Domain\Order;
-use Kelunik\Acme\Domain\Registration;
+use Assert\InvalidArgumentException;
+use Kelunik\Acme\Protocol\Authorization;
+use Kelunik\Acme\Protocol\Challenge;
+use Kelunik\Acme\Protocol\Identifier;
 use PHPUnit\Framework\TestCase;
+use function Kelunik\Acme\Protocol\identifier;
 
 class AcmeResponseTest extends TestCase
 {
@@ -16,13 +16,10 @@ class AcmeResponseTest extends TestCase
      */
     public function parseIdentifierObject(): void
     {
-        $payloadIdentifier = new \stdClass();
-        $payloadIdentifier->type = "type";
-        $payloadIdentifier->value = "value";
-        $identifier = Identifier::fromResponse($payloadIdentifier);
+        $identifier = identifier()(['value' => 'value', 'type' => 'type']);
 
-        $this->assertEquals("type", $identifier->getType());
-        $this->assertEquals("value", $identifier->getValue());
+        $this->assertSame("type", $identifier->getType());
+        $this->assertSame("value", $identifier->getValue());
     }
 
     /**
@@ -30,12 +27,10 @@ class AcmeResponseTest extends TestCase
      */
     public function failsParseIdentifierObject(): void
     {
-        $this->expectException(AcmeException::class);
-        $this->expectExceptionMessage('Error parsing property: value for Identifier response');
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Array does not contain an element with key "value"');
 
-        $payloadIdentifier = new \stdClass();
-        $payloadIdentifier->type = "type";
-        Identifier::fromResponse($payloadIdentifier);
+        identifier()(['type' => 'type']);
     }
 
     /**
@@ -43,17 +38,12 @@ class AcmeResponseTest extends TestCase
      */
     public function parseChallengeObject(): void
     {
-        $payloadChallenge = new \stdClass();
-        $payloadChallenge->type = "type";
-        $payloadChallenge->url = "url";
-        $payloadChallenge->status = "status";
-        $payloadChallenge->token = "token";
-        $challenge = Challenge::fromResponse($payloadChallenge);
+        $challenge = Challenge::fromResponse('{ "type": "http-01", "url": "https://example.com/acme/chall/prV_B7yEyA4", "status": "valid", "validated": "2014-12-01T12:05:13.72Z", "token": "IlirfxKKXAsHtmzK29Pj8A" }');
 
-        $this->assertEquals("type", $challenge->getType());
-        $this->assertEquals("url", $challenge->getUrl());
-        $this->assertEquals("status", $challenge->getStatus());
-        $this->assertEquals("token", $challenge->getToken());
+        $this->assertEquals("http-01", $challenge->getType());
+        $this->assertEquals("https://example.com/acme/chall/prV_B7yEyA4", (string) $challenge->getUrl());
+        $this->assertEquals("valid", $challenge->getStatus());
+        $this->assertEquals("IlirfxKKXAsHtmzK29Pj8A", $challenge->getToken());
     }
 
     /**
@@ -62,13 +52,9 @@ class AcmeResponseTest extends TestCase
     public function failsParseChallengeObject(): void
     {
         $this->expectException(AcmeException::class);
-        $this->expectExceptionMessage('Error parsing property: token for Challenge response');
+        $this->expectExceptionMessage('Invalid response');
 
-        $payloadChallenge = new \stdClass();
-        $payloadChallenge->type = "type";
-        $payloadChallenge->url = "url";
-        $payloadChallenge->status = "status";
-        Challenge::fromResponse($payloadChallenge);
+        Challenge::fromResponse('{ "type": "http-01", "url": "https://example.com/acme/chall/prV_B7yEyA4", "status": "foobar", "validated": "2014-12-01T12:05:13.72Z", "token": "IlirfxKKXAsHtmzK29Pj8A" }');
     }
 
     /**
@@ -76,28 +62,31 @@ class AcmeResponseTest extends TestCase
      */
     public function parseAuthorizationObject(): void
     {
-        $payloadChallenge = new \stdClass();
-        $payloadChallenge->type = "type";
-        $payloadChallenge->url = "url";
-        $payloadChallenge->status = "status";
-        $payloadChallenge->token = "token";
+        $authorization = Authorization::fromResponse('{
+     "status": "valid",
+     "expires": "2018-09-09T14:09:01.13Z",
 
-        $payloadIdentifier = new \stdClass();
-        $payloadIdentifier->type = "type";
-        $payloadIdentifier->value = "value";
+     "identifier": {
+       "type": "dns",
+       "value": "www.example.org"
+     },
 
-        $payloadAuthorization = new \stdClass();
-        $payloadAuthorization->identifier = $payloadIdentifier;
-        $payloadAuthorization->status = "status";
-        $payloadAuthorization->expires = "expires";
-        $payloadAuthorization->challenges = [$payloadChallenge];
+     "challenges": [
+       {
+         "type": "http-01",
+         "url": "https://example.com/acme/chall/prV_B7yEyA4",
+         "status": "valid",
+         "validated": "2014-12-01T12:05:13.72Z",
+         "token": "IlirfxKKXAsHtmzK29Pj8A"
+       }
+     ]
+   }');
 
-        $authorization = Authorization::fromResponse($payloadAuthorization);
-
-        $this->assertEquals(Identifier::fromResponse($payloadIdentifier), $authorization->getIdentifier());
-        $this->assertEquals("status", $authorization->getStatus());
-        $this->assertEquals("expires", $authorization->getExpires());
-        $this->assertEquals([Challenge::fromResponse($payloadChallenge)], $authorization->getChallenges());
+        $this->assertEquals(new Identifier('dns', 'www.example.org'), $authorization->getIdentifier());
+        $this->assertSame("valid", $authorization->getStatus());
+        $this->assertSame('2018', $authorization->getExpires()->format('Y'));
+        $this->assertCount(1, $authorization->getChallenges());
+        $this->assertSame('http-01', $authorization->getChallenges()[0]->getType());
     }
 
     /**
@@ -106,122 +95,16 @@ class AcmeResponseTest extends TestCase
     public function failsParseIdentifierForAuthorizationObject(): void
     {
         $this->expectException(AcmeException::class);
-        $this->expectExceptionMessage('Error parsing property: identifier for Authorization response');
+        $this->expectExceptionMessage('Invalid response');
 
-        $payloadChallenge = new \stdClass();
-        $payloadChallenge->type = "type";
-        $payloadChallenge->url = "url";
-        $payloadChallenge->status = "status";
-        $payloadChallenge->token = "token";
+        Authorization::fromResponse('{
+     "status": "valid",
+     "expires": "2018-09-09T14:09:01.13Z",
 
-        $payloadAuthorization = new \stdClass();
-        $payloadAuthorization->status = "status";
-        $payloadAuthorization->expires = "expires";
-        $payloadAuthorization->challenges = [$payloadChallenge];
-
-        Authorization::fromResponse($payloadAuthorization);
-    }
-
-    /**
-     * @test
-     */
-    public function parseChallengeForAuthorizationObject(): void
-    {
-        $payloadIdentifier = new \stdClass();
-        $payloadIdentifier->type = "type";
-        $payloadIdentifier->value = "value";
-
-        $payloadAuthorization = new \stdClass();
-        $payloadAuthorization->identifier = $payloadIdentifier;
-        $payloadAuthorization->status = "status";
-        $payloadAuthorization->expires = "expires";
-
-        $authorization = Authorization::fromResponse($payloadAuthorization);
-
-        $this->assertEquals(Identifier::fromResponse($payloadIdentifier), $authorization->getIdentifier());
-        $this->assertEquals("status", $authorization->getStatus());
-        $this->assertEquals("expires", $authorization->getExpires());
-        $this->assertEquals([], $authorization->getChallenges());
-    }
-
-    /**
-     * @test
-     */
-    public function parseOrderObjectWithDefaultValues(): void
-    {
-        $payloadIdentifier = new \stdClass();
-        $payloadIdentifier->type = "type";
-        $payloadIdentifier->value = "value";
-
-        $payloadOrder = new \stdClass();
-        $payloadOrder->location = "location";
-        $payloadOrder->status = "status";
-        $payloadOrder->identifiers = [$payloadIdentifier];
-        $payloadOrder->authorizations = ["authorization1"];
-        $payloadOrder->finalize = "finalize";
-
-        $order = Order::fromResponse($payloadOrder);
-
-        $this->assertEquals("location", $order->getLocation());
-        $this->assertEquals("status", $order->getStatus());
-        $this->assertEquals([Identifier::fromResponse($payloadIdentifier)], $order->getIdentifiers());
-        $this->assertEquals(["authorization1"], $order->getAuthorizations());
-        $this->assertEquals("finalize", $order->getFinalize());
-        self::assertNull($order->getExpires());
-        self::assertNull($order->getNotAfter());
-        self::assertNull($order->getCertificate());
-        self::assertNull($order->getNotBefore());
-    }
-
-    /**
-     * @test
-     */
-    public function parseFailsOrderObject(): void
-    {
-        $this->expectException(AcmeException::class);
-        $this->expectExceptionMessage('Error parsing property: finalize for Order response');
-
-        $payloadIdentifier = new \stdClass();
-        $payloadIdentifier->type = "type";
-        $payloadIdentifier->value = "value";
-
-        $payloadOrder = new \stdClass();
-        $payloadOrder->location = "location";
-        $payloadOrder->status = "status";
-        $payloadOrder->identifiers = [$payloadIdentifier];
-        $payloadOrder->authorizations = ["authorization1"];
-
-        Order::fromResponse($payloadOrder);
-    }
-
-    /**
-     * @test
-     */
-    public function parseRegistrationObject(): void
-    {
-        $payloadRegistration = new \stdClass();
-        $payloadRegistration->location = 'location';
-        $payloadRegistration->status = 'status';
-        $payloadRegistration->orders = "orders";
-
-        $registration = Registration::fromResponse($payloadRegistration);
-        $this->assertEquals("location", $registration->getLocation());
-        $this->assertEquals("status", $registration->getStatus());
-        $this->assertEquals("orders", $registration->getOrders());
-        $this->assertEquals([], $registration->getContact());
-    }
-
-    /**
-     * @test
-     */
-    public function parseFailsRegistrationObject(): void
-    {
-        $payloadRegistration = new \stdClass();
-        $payloadRegistration->location = 'location';
-
-        $this->expectException(AcmeException::class);
-        $this->expectExceptionMessage('Error parsing property: status for Registration response');
-
-        Registration::fromResponse($payloadRegistration);
+     "identifier": {
+       "type": "dns",
+       "value": "www.example.org"
+     }
+   }');
     }
 }

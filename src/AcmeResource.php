@@ -18,9 +18,9 @@ namespace Kelunik\Acme;
 final class AcmeResource
 {
     /**
-     * New order.
+     * New nonce.
      */
-    public const NEW_ORDER = 'newOrder';
+    public const NEW_NONCE = 'newNonce';
 
     /**
      * New account.
@@ -28,9 +28,14 @@ final class AcmeResource
     public const NEW_ACCOUNT = 'newAccount';
 
     /**
-     * New nonce.
+     * New order.
      */
-    public const NEW_NONCE = 'newNonce';
+    public const NEW_ORDER = 'newOrder';
+
+    /**
+     * New authorization.
+     */
+    public const NEW_AUTHORIZATION = 'newAuthz';
 
     /**
      * Revoke certificate.
@@ -38,10 +43,9 @@ final class AcmeResource
     public const REVOKE_CERTIFICATE = 'revokeCert';
 
     /**
-     * Key change.
+     * Change key.
      */
-    public const KEY_CHANGE = 'keyChange';
-
+    public const CHANGE_KEY = 'keyChange';
 
     public static function requiresJwkAuthorization(string $resource): bool
     {

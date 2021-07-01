@@ -9,14 +9,11 @@ use Amp\PHPUnit\AsyncTestCase;
 use Amp\Socket\ClientTlsContext;
 use Amp\Socket\ConnectContext;
 use Kelunik\Acme\Crypto\RsaKeyGenerator;
-use Kelunik\Acme\Domain\Registration;
+use Kelunik\Acme\Protocol\Account;
 
 class AcmeServiceTest extends AsyncTestCase
 {
-    /**
-     * @var AcmeService
-     */
-    private $acme;
+    private AcmeService $service;
 
     public function setUp(): void
     {
@@ -26,8 +23,10 @@ class AcmeServiceTest extends AsyncTestCase
             $this->markTestSkipped('No Boulder host set. Set the environment variable BOULDER_HOST to enable those tests.');
         }
 
-        $httpPool = new UnlimitedConnectionPool(new DefaultConnectionFactory(null,
-            (new ConnectContext)->withTlsContext((new ClientTlsContext(''))->withoutPeerVerification())));
+        $httpPool = new UnlimitedConnectionPool(new DefaultConnectionFactory(
+            null,
+            (new ConnectContext)->withTlsContext((new ClientTlsContext(''))->withoutPeerVerification())
+        ));
 
         $httpClient = (new HttpClientBuilder)
             ->usingPool($httpPool)
@@ -35,7 +34,7 @@ class AcmeServiceTest extends AsyncTestCase
 
         $key = (new RsaKeyGenerator)->generateKey();
         $client = new AcmeClient(\getenv('BOULDER_HOST') . '/dir', $key, null, $httpClient);
-        $this->acme = new AcmeService($client);
+        $this->service = new AcmeService($client);
     }
 
     /**
@@ -46,8 +45,7 @@ class AcmeServiceTest extends AsyncTestCase
         $this->expectException(AcmeException::class);
         $this->expectExceptionMessage('Provided account did not agree to the terms of service');
 
-        /** @var Registration $registration */
-        yield $this->acme->register('me@example.com');
+        yield $this->service->register('me@example.com');
     }
 
     /**
@@ -55,13 +53,15 @@ class AcmeServiceTest extends AsyncTestCase
      */
     public function registerAndReRegisterGivesSameLocation(): \Generator
     {
-        $registration = yield $this->acme->register('me@example.com', true);
-        $this->assertSame(['mailto:me@example.com'], $registration->getContact());
-        $this->assertNotNull($l1 = $registration->getLocation());
+        /** @var Account $account */
+        $account = yield $this->service->register('me@example.com', true);
+        $this->assertSame('mailto:me@example.com', (string) $account->getContacts()[0]);
+        $this->assertNotNull($l1 = (string) $account->getUrl());
 
-        $registration = yield $this->acme->register('me@example.com', true);
-        $this->assertSame(['mailto:me@example.com'], $registration->getContact());
-        $this->assertNotNull($l2 = $registration->getLocation());
+        /** @var Account $account */
+        $account = yield $this->service->register('me@example.com', true);
+        $this->assertSame('mailto:me@example.com', (string) $account->getContacts()[0]);
+        $this->assertNotNull($l2 = (string) $account->getUrl());
 
         $this->assertSame($l1, $l2);
     }

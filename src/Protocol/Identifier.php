@@ -7,37 +7,20 @@
  * @license MIT
  */
 
-namespace Kelunik\Acme\Domain;
+namespace Kelunik\Acme\Protocol;
 
-/**
- * ACME Identifier object.
- *
- * @author Niklas Keller <me@kelunik.com>
- * @package Kelunik\Acme
- */
-class Identifier extends AcmeResponse
+final class Identifier
 {
-    public static function fromResponse($payload): Identifier
-    {
-        return new Identifier(...self::parsePayloadWithProps($payload, ['type', 'value']));
-    }
-
     /**
      * @var string Type validation of this identifier.
      */
-    private $type;
+    private string $type;
 
     /**
      * @var string The identifier value.
      */
-    private $value;
+    private string $value;
 
-    /**
-     * Identifier constructor.
-     *
-     * @param string $type
-     * @param string $value
-     */
     public function __construct(string $type, string $value)
     {
         $this->type = $type;
