@@ -42,6 +42,8 @@ final class Authorization
      */
     private array $challenges;
 
+    private bool $wildcard;
+
     /**
      * Authorization constructor.
      *
@@ -54,12 +56,19 @@ final class Authorization
         Identifier $identifier,
         string $status,
         \DateTimeImmutable $expires,
-        array $challenges = []
+        array $challenges = [],
+        ?bool $wildcard = false
     ) {
         $this->identifier = $identifier;
         $this->status = $status;
         $this->expires = $expires;
         $this->challenges = $challenges;
+        $this->wildcard = $wildcard ?? false;
+    }
+
+    public function isWildcard(): bool
+    {
+        return $this->wildcard;
     }
 
     public function getIdentifier(): Identifier
