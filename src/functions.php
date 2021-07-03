@@ -63,7 +63,12 @@ function parseDate(?string $date): ?\DateTimeImmutable
         return null;
     }
 
-    return \DateTimeImmutable::createFromFormat('Y-m-d\TH:i:s.uP', $date);
+    $dateTime = \DateTimeImmutable::createFromFormat('Y-m-d\TH:i:s.uP', $date);
+    if ($dateTime === null) {
+        throw new AcmeException('Invalid date format: ' . $date);
+    }
+
+    return $dateTime;
 }
 
 function formatDate(\DateTimeInterface $date): string
