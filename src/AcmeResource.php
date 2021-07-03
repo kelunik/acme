@@ -47,8 +47,15 @@ final class AcmeResource
      */
     public const CHANGE_KEY = 'keyChange';
 
-    public static function requiresJwkAuthorization(string $resource): bool
+    public static function getAll(): array
     {
-        return $resource === self::NEW_ACCOUNT;
+        return [
+            self::NEW_NONCE,
+            self::NEW_ACCOUNT,
+            self::NEW_ORDER,
+            self::NEW_AUTHORIZATION,
+            self::REVOKE_CERTIFICATE,
+            self::CHANGE_KEY,
+        ];
     }
 }

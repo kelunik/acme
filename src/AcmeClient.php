@@ -21,11 +21,13 @@ use Amp\Success;
 use Kelunik\Acme\Crypto\Backend\Backend;
 use Kelunik\Acme\Crypto\Backend\OpensslBackend;
 use Kelunik\Acme\Crypto\PrivateKey;
+use Kelunik\Acme\Protocol\Account;
 use Psr\Log\LoggerInterface as PsrLogger;
 use Psr\Log\NullLogger;
 use Throwable;
 use function Amp\call;
 use function Amp\delay;
+use function Sabre\Uri\resolve;
 
 /**
  * Low level ACME client.
@@ -38,71 +40,66 @@ final class AcmeClient
     /**
      * @var HttpClient HTTP client.
      */
-    private $httpClient;
+    private HttpClient $httpClient;
 
     /**
      * @var Backend Crypto backend.
      */
-    private $cryptoBackend;
+    private Backend $cryptoBackend;
 
     /**
      * @var PrivateKey Account key.
      */
-    private $accountKey;
+    private PrivateKey $accountKey;
 
     /**
-     * @var string Account location URI
+     * @var string|null Account location URI
      */
-    private $accountLocation;
+    private ?string $accountUrl = null;
 
     /**
      * @var string Directory URI of the ACME server.
      */
-    private $directoryUri;
+    private string $directoryUrl;
 
     /**
      * @var array Directory contents of the ACME server.
      */
-    private $directory;
+    private array $directory = [];
 
     /**
-     * @var array Cached nonces for use in future requests.
+     * @var string[] Cached nonces for use in future requests.
      */
-    private $nonces;
+    private array $nonces;
 
     /**
      * @var PsrLogger Logger for debug information.
      */
-    private $logger;
+    private PsrLogger $logger;
 
     /**
      * AcmeClient constructor.
      *
      * @param string          $directoryUri URI to the ACME server directory.
-     * @param string|null     $accountLocation
      * @param PrivateKey      $accountKey Account key.
      * @param HttpClient|null $httpClient Custom HTTP client, a default client will be used if no value is provided.
      * @param Backend|null    $cryptoBackend Custom crypto backend, a default OpensslBackend will be used if no value is
      *     provided.
      * @param PsrLogger|null  $logger Logger for debug information.
-     *
-     * @api
      */
     public function __construct(
         string $directoryUri,
         PrivateKey $accountKey,
-        ?string $accountLocation = null,
         ?HttpClient $httpClient = null,
         ?Backend $cryptoBackend = null,
         ?PsrLogger $logger = null
     ) {
-        $this->directoryUri = $directoryUri;
+        $this->directoryUrl = $directoryUri;
         $this->accountKey = $accountKey;
-        $this->accountLocation = $accountLocation;
         $this->httpClient = $httpClient ?? $this->buildClient();
         $this->cryptoBackend = $cryptoBackend ?? new OpensslBackend;
-        $this->nonces = [];
         $this->logger = $logger ?? new NullLogger;
+        $this->nonces = [];
     }
 
     /**
@@ -111,8 +108,6 @@ final class AcmeClient
      * @param string $resource Resource to fetch.
      *
      * @return Promise Resolves to the HTTP response.
-     * @throws AcmeException If the request failed.
-     * @api
      */
     public function get(string $resource): Promise
     {
@@ -152,13 +147,13 @@ final class AcmeClient
      * @param array  $payload Payload as associative array to send.
      *
      * @return Promise Resolves to the HTTP response.
-     * @throws AcmeException If the request failed.
-     * @api
      */
     public function post(string $resource, array $payload): Promise
     {
         return call(function () use ($resource, $payload) {
             $url = yield $this->getResourceUrl($resource);
+
+            $newAccountUrl = yield $this->getResourceUrl(AcmeResource::NEW_ACCOUNT);
 
             $attempt = 0;
             $statusCode = null;
@@ -172,13 +167,20 @@ final class AcmeClient
 
                 $payload['url'] = $payload['url'] ?? $url;
 
-                $accountLocation = AcmeResource::requiresJwkAuthorization($resource) ? null : $this->accountLocation;
+                $accountUrl = $url === $newAccountUrl ? null : $this->accountUrl;
+                if ($url !== $newAccountUrl && $this->accountUrl === null) {
+                    /** @var Account $account */
+                    $account = yield $this->getAccount();
+                    $this->accountUrl = (string) $account->getUrl();
+                }
+
                 $requestBody = $this->cryptoBackend->signJwt(
                     $this->accountKey,
                     yield $this->getNonce(),
                     $payload,
-                    $accountLocation
+                    $accountUrl
                 );
+
                 $request = new Request($url, 'POST', $requestBody);
 
                 $this->logger->debug('Requesting {url} via POST: {body}', [
@@ -252,6 +254,22 @@ final class AcmeClient
         return new Success(\array_shift($this->nonces));
     }
 
+    private function getAccount(): Promise
+    {
+        return call(function () {
+            /** @var Response $response */
+            $response = yield $this->post(AcmeResource::NEW_ACCOUNT, [
+                'onlyReturnExisting' => true,
+            ]);
+
+            if (\in_array($response->getStatus(), [200, 201], true)) {
+                return Account::fromResponse($response->getHeader('location'), yield $response->getBody()->buffer());
+            }
+
+            throw new AcmeException('Unable to find account with given private key');
+        });
+    }
+
     /**
      * Requests a new request nonce from the server.
      *
@@ -288,7 +306,6 @@ final class AcmeClient
      * @param string $resource URI or directory entry.
      *
      * @return Promise Resolves to the resource URI.
-     * @throws AcmeException If the specified resource is not in the directory.
      */
     private function getResourceUrl(string $resource): Promise
     {
@@ -316,18 +333,17 @@ final class AcmeClient
      * Retrieves the directory and stores it in the directory property.
      *
      * @return Promise Resolves once the directory is fetched.
-     * @throws AcmeException If the directory could not be fetched or was invalid.
      */
     private function fetchDirectory(): Promise
     {
         return call(function () {
             try {
                 $this->logger->debug('Fetching directory from {url}', [
-                    'url' => $this->directoryUri,
+                    'url' => $this->directoryUrl,
                 ]);
 
                 /** @var Response $response */
-                $response = yield $this->httpClient->request(new Request($this->directoryUri));
+                $response = yield $this->httpClient->request(new Request($this->directoryUrl));
                 $directory = \json_decode(yield $response->getBody()->buffer(), true);
 
                 if ($response->getStatus() !== 200) {
@@ -342,6 +358,12 @@ final class AcmeClient
 
                 if (empty($directory)) {
                     throw new AcmeException('Invalid empty directory.');
+                }
+
+                foreach (AcmeResource::getAll() as $key) {
+                    if (isset($directory[$key])) {
+                        $directory[$key] = resolve($this->directoryUrl, $directory[$key]);
+                    }
                 }
 
                 $this->directory = $directory;

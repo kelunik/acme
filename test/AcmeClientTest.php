@@ -62,7 +62,6 @@ class AcmeClientTest extends AsyncTestCase
         $client = new AcmeClient(
             \getenv('BOULDER_HOST') . '/dir',
             (new RsaKeyGenerator())->generateKey(),
-            null,
             (new HttpClientBuilder)->usingPool($this->httpPool)->build()
         );
         yield $client->post('foobar', []);
@@ -77,7 +76,6 @@ class AcmeClientTest extends AsyncTestCase
         $client = new AcmeClient(
             \getenv('BOULDER_HOST') . '/dir',
             (new RsaKeyGenerator())->generateKey(),
-            null,
             (new HttpClientBuilder)->usingPool($this->httpPool)->build()
         );
 
@@ -106,32 +104,11 @@ class AcmeClientTest extends AsyncTestCase
         $client = new AcmeClient(
             \getenv('BOULDER_HOST') . '/dir',
             (new RsaKeyGenerator())->generateKey(),
-            null,
             (new HttpClientBuilder)->usingPool($this->httpPool)->build()
         );
 
-        yield $client->post(\getenv('BOULDER_HOST') . '/acme/new-acct', []);
+        yield $client->post(\getenv('BOULDER_HOST') . '/sign-me-up', []);
         $this->addToAssertionCount(1);
-    }
-
-    /**
-     * @test
-     * @depends boulderConfigured
-     */
-    public function failsIfHostNotAvailable(): \Generator
-    {
-        $this->expectException(AcmeException::class);
-        $this->expectExceptionMessageMatches('~POST request to .* failed~');
-
-        $client = new AcmeClient(
-            \getenv('BOULDER_HOST') . '/dir',
-            (new RsaKeyGenerator())->generateKey(),
-            null,
-            (new HttpClientBuilder)->usingPool($this->httpPool)->build()
-        );
-
-        // mute because of stream_socket_enable_crypto(): SSL: Connection refused warning
-        @yield $client->post('https://127.0.0.1:444/', []);
     }
 
     /**
@@ -151,7 +128,6 @@ class AcmeClientTest extends AsyncTestCase
         $client = new AcmeClient(
             \getenv('BOULDER_HOST') . '/dir',
             (new RsaKeyGenerator())->generateKey(),
-            null,
             (new HttpClientBuilder)->usingPool($this->httpPool)->build()
         );
 
@@ -185,7 +161,6 @@ class AcmeClientTest extends AsyncTestCase
         $client = new AcmeClient(
             \getenv('BOULDER_HOST') . '/dir',
             (new RsaKeyGenerator())->generateKey(),
-            null,
             $httpClient
         );
 
@@ -222,7 +197,6 @@ class AcmeClientTest extends AsyncTestCase
         $client = new AcmeClient(
             \getenv('BOULDER_HOST') . '/dir',
             (new RsaKeyGenerator())->generateKey(),
-            null,
             $httpClient
         );
 
@@ -262,7 +236,6 @@ class AcmeClientTest extends AsyncTestCase
         $client = new AcmeClient(
             \getenv('BOULDER_HOST') . '/dir',
             (new RsaKeyGenerator())->generateKey(),
-            null,
             $httpClient
         );
 
@@ -303,7 +276,6 @@ class AcmeClientTest extends AsyncTestCase
         $client = new AcmeClient(
             \getenv('BOULDER_HOST') . '/dir',
             (new RsaKeyGenerator())->generateKey(),
-            null,
             $httpClient
         );
 

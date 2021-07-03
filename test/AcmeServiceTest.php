@@ -33,7 +33,7 @@ class AcmeServiceTest extends AsyncTestCase
             ->build();
 
         $key = (new RsaKeyGenerator)->generateKey();
-        $client = new AcmeClient(\getenv('BOULDER_HOST') . '/dir', $key, null, $httpClient);
+        $client = new AcmeClient(\getenv('BOULDER_HOST') . '/dir', $key, $httpClient);
         $this->service = new AcmeService($client);
     }
 
