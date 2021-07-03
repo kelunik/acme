@@ -63,12 +63,19 @@ function parseDate(?string $date): ?\DateTimeImmutable
         return null;
     }
 
-    $dateTime = \DateTimeImmutable::createFromFormat('Y-m-d\TH:i:s.uP', $date);
-    if ($dateTime === false) {
-        throw new AcmeException('Invalid date format: ' . $date);
+    $formats = [
+        'Y-m-d\TH:i:sP',
+        'Y-m-d\TH:i:s.uP',
+    ];
+
+    foreach ($formats as $format) {
+        $dateTime = \DateTimeImmutable::createFromFormat($format, $date);
+        if ($dateTime !== false) {
+            return $dateTime;
+        }
     }
 
-    return $dateTime;
+    throw new AcmeException('Invalid date format: ' . $date);
 }
 
 function formatDate(\DateTimeInterface $date): string
