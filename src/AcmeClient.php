@@ -171,7 +171,7 @@ final class AcmeClient
                 if ($url !== $newAccountUrl && $this->accountUrl === null) {
                     /** @var Account $account */
                     $account = yield $this->getAccount();
-                    $this->accountUrl = (string) $account->getUrl();
+                    $this->accountUrl = $accountUrl = (string) $account->getUrl();
                 }
 
                 $requestBody = $this->cryptoBackend->signJwt(
