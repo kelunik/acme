@@ -6,6 +6,7 @@ use Assert\InvalidArgumentException;
 use Kelunik\Acme\Protocol\Authorization;
 use Kelunik\Acme\Protocol\Challenge;
 use Kelunik\Acme\Protocol\Identifier;
+use League\Uri\Http;
 use PHPUnit\Framework\TestCase;
 use function Kelunik\Acme\Protocol\identifier;
 
@@ -62,7 +63,7 @@ class AcmeResponseTest extends TestCase
      */
     public function parseAuthorizationObject(): void
     {
-        $authorization = Authorization::fromResponse('{
+        $authorization = Authorization::fromResponse(Http::createFromString('http://example.com/'), '{
      "status": "valid",
      "expires": "2018-09-09T14:09:01.13Z",
 
@@ -97,7 +98,7 @@ class AcmeResponseTest extends TestCase
         $this->expectException(AcmeException::class);
         $this->expectExceptionMessage('Invalid response');
 
-        Authorization::fromResponse('{
+        Authorization::fromResponse(Http::createFromString('http://example.com/'), '{
      "status": "valid",
      "expires": "2018-09-09T14:09:01.13Z",
 

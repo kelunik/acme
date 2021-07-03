@@ -9,11 +9,19 @@
 
 namespace Kelunik\Acme\Protocol;
 
+use Kelunik\Acme\AcmeException;
+use League\Uri\Http;
+use Psr\Http\Message\UriInterface;
+
 final class Authorization
 {
-    public static function fromResponse(string $payload): Authorization
+    public static function fromResponse(?string $url, string $payload): Authorization
     {
-        return new self(...parseResponse($payload, [
+        if ($url === null) {
+            throw new AcmeException('Missing authorization URL');
+        }
+
+        return new self(Http::createFromString($url), ...parseResponse($payload, [
             'identifier' => identifier(),
             'status' => enum(AuthorizationStatus::getAll()),
             'expires' => dateTime(),
@@ -21,6 +29,8 @@ final class Authorization
             'wildcard' => optional(boolean()),
         ]));
     }
+
+    private UriInterface $url;
 
     /**
      * @var Identifier The subjective identifier.
@@ -53,17 +63,24 @@ final class Authorization
      * @param Challenge[]        $challenges
      */
     public function __construct(
+        UriInterface  $url,
         Identifier $identifier,
         string $status,
         \DateTimeImmutable $expires,
         array $challenges = [],
         ?bool $wildcard = false
     ) {
+        $this->url = $url;
         $this->identifier = $identifier;
         $this->status = $status;
         $this->expires = $expires;
         $this->challenges = $challenges;
         $this->wildcard = $wildcard ?? false;
+    }
+
+    public function getUrl(): UriInterface
+    {
+        return $this->url;
     }
 
     public function isWildcard(): bool

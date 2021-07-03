@@ -130,13 +130,13 @@ class AcmeService
     }
 
     /**
-     * Answers a challenge and signals that the CA should validate it.
+     * Finalizes a challenge and signals that the CA should validate it.
      *
      * @param UriInterface $url URI of the challenge
      *
      * @return Promise<Challenge>
      */
-    public function answerChallenge(UriInterface $url): Promise
+    public function finalizeChallenge(UriInterface $url): Promise
     {
         return call(function () use ($url) {
             /** @var Response $response */
@@ -164,7 +164,7 @@ class AcmeService
             $response = yield $this->client->post($url, []);
 
             try {
-                return Authorization::fromResponse(yield $response->getBody()->buffer());
+                return Authorization::fromResponse($url, yield $response->getBody()->buffer());
             } catch (\Throwable $_) {
                 throw $this->generateException($response, yield $response->getBody()->buffer());
             }
