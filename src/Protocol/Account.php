@@ -24,7 +24,7 @@ final class Account
         return new self(Http::createFromString($url), ...parseResponse($payload, [
             'status' => enum(AccountStatus::getAll()),
             'contact' => multiple(contact()),
-            'orders' => url(),
+            'orders' => optional(url()),
         ]));
     }
 
