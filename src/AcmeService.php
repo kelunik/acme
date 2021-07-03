@@ -195,23 +195,23 @@ class AcmeService
     /**
      * Polls until a challenge has been validated.
      *
-     * @param UriInterface $url URI of the challenge
+     * @param UriInterface $url URI of the authorization
      *
      * @return Promise<void>
      */
-    public function pollForChallenge(UriInterface $url): Promise
+    public function pollForAuthorization(UriInterface $url): Promise
     {
         return call(function () use ($url) {
             do {
-                /** @var Challenge $challenge */
-                $challenge = yield $this->getChallenge($url);
+                /** @var Authorization $authorization */
+                $authorization = yield $this->getAuthorization($url);
 
-                if ($challenge->getStatus() === ChallengeStatus::INVALID) {
+                if ($authorization->getStatus() === ChallengeStatus::INVALID) {
                     // TODO Use Challenge->getError
-                    throw new AcmeException('Challenge marked as invalid.');
+                    throw new AcmeException('Authorization marked as invalid.');
                 }
 
-                if ($challenge->getStatus() === ChallengeStatus::VALID) {
+                if ($authorization->getStatus() === ChallengeStatus::VALID) {
                     break;
                 }
 
