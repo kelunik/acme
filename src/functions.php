@@ -64,7 +64,7 @@ function parseDate(?string $date): ?\DateTimeImmutable
     }
 
     $dateTime = \DateTimeImmutable::createFromFormat('Y-m-d\TH:i:s.uP', $date);
-    if ($dateTime === null) {
+    if ($dateTime === false) {
         throw new AcmeException('Invalid date format: ' . $date);
     }
 
