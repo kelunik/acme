@@ -24,9 +24,9 @@ function parseResponse(string $json, array $schema): array
 
         return $result;
     } catch (\JsonException $e) {
-        throw new AcmeException('Invalid JSON response', 0, $e);
+        throw new AcmeException('Invalid JSON response: ' . $json, 0, $e);
     } catch (AssertionFailedException $e) {
-        throw new AcmeException('Invalid response', 0, $e);
+        throw new AcmeException('Invalid response: ' . $json, 0, $e);
     }
 }
 
