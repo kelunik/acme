@@ -19,6 +19,8 @@ use Kelunik\Acme\Protocol\ChallengeStatus;
 use Kelunik\Acme\Protocol\Order;
 use Kelunik\Certificate\Certificate;
 use Psr\Http\Message\UriInterface;
+use Psr\Log\LoggerInterface as PsrLogger;
+use Psr\Log\NullLogger;
 use function Amp\call;
 use function Amp\delay;
 use function Sabre\Uri\resolve;
@@ -36,9 +38,12 @@ class AcmeService
      */
     private AcmeClient $client;
 
-    public function __construct(AcmeClient $client)
+    private PsrLogger $logger;
+
+    public function __construct(AcmeClient $client, ?PsrLogger $logger = null)
     {
         $this->client = $client;
+        $this->logger = $logger ?? new NullLogger;
     }
 
     /**
@@ -54,6 +59,8 @@ class AcmeService
     public function register(string $email, bool $agreement = false): Promise
     {
         return call(function () use ($email, $agreement) {
+            $this->logger->info('Creating new account with email ' . $email);
+
             /** @var Response $response */
             $response = yield $this->client->post(AcmeResource::NEW_ACCOUNT, [
                 'termsOfServiceAgreed' => $agreement,
@@ -76,6 +83,8 @@ class AcmeService
     public function getOrder(UriInterface $url): Promise
     {
         return call(function () use ($url) {
+            $this->logger->info('Retrieving order ' . $url);
+
             /** @var Response $response */
             $response = yield $this->client->post($url, []);
 
@@ -102,6 +111,8 @@ class AcmeService
         ?\DateTimeInterface $notAfter = null
     ): Promise {
         return call(function () use ($domainNames, $notBefore, $notAfter) {
+            $this->logger->info('Creating new order for ' . \implode(', ', $domainNames));
+
             $request = [
                 'identifiers' => [],
             ];
@@ -139,6 +150,8 @@ class AcmeService
     public function finalizeChallenge(UriInterface $url): Promise
     {
         return call(function () use ($url) {
+            $this->logger->info('Finalizing challenge ' . $url);
+
             /** @var Response $response */
             $response = yield $this->client->post($url, []);
 
@@ -160,6 +173,8 @@ class AcmeService
     public function getAuthorization(UriInterface $url): Promise
     {
         return call(function () use ($url) {
+            $this->logger->info('Retrieving authorization ' . $url);
+
             /** @var Response $response */
             $response = yield $this->client->post($url, []);
 
@@ -181,6 +196,8 @@ class AcmeService
     public function getChallenge(UriInterface $url): Promise
     {
         return call(function () use ($url) {
+            $this->logger->info('Retrieving challenge ' . $url);
+
             /** @var Response $response */
             $response = yield $this->client->post($url, []);
 
@@ -202,9 +219,13 @@ class AcmeService
     public function pollForAuthorization(UriInterface $url): Promise
     {
         return call(function () use ($url) {
+            $this->logger->info('Polling for authorization ' . $url);
+
             do {
                 /** @var Authorization $authorization */
                 $authorization = yield $this->getAuthorization($url);
+
+                $this->logger->info('Retrieved authorization ' . $url . ': ' . $authorization->getStatus());
 
                 if ($authorization->getStatus() === ChallengeStatus::INVALID) {
                     // TODO Use Challenge->getError
@@ -239,6 +260,8 @@ class AcmeService
     public function finalizeOrder(UriInterface $url, string $csr): Promise
     {
         return call(function () use ($url, $csr) {
+            $this->logger->info('Finalizing order ' . $url);
+
             $begin = 'REQUEST-----';
             $end = '----END';
 
@@ -279,6 +302,8 @@ class AcmeService
     public function pollForCertificate(UriInterface $url): Promise
     {
         return call(function () use ($url) {
+            $this->logger->info('Polling for certificate ' . $url);
+
             do {
                 /** @var Response $response */
                 $response = yield $this->client->post($url, []);
@@ -346,6 +371,8 @@ class AcmeService
     public function revokeCertificate(string $pem): Promise
     {
         return call(function () use ($pem) {
+            $this->logger->info('Revoking certificate ' . $pem);
+
             /** @var Response $response */
             $response = yield $this->client->post(AcmeResource::REVOKE_CERTIFICATE, [
                 'certificate' => base64UrlEncode(Certificate::pemToDer($pem)),
