@@ -367,7 +367,7 @@ class AcmeService
                 $certificateChain = yield $response->getBody()->buffer();
                 $certificates = [];
 
-                while (\preg_match('(-----BEGIN CERTIFICATE-----(.*?)-----END CERTIFICATE-----)', $certificateChain,
+                while (\preg_match('(-----BEGIN CERTIFICATE-----(.*?)-----END CERTIFICATE-----)si', $certificateChain,
                     $match)) {
                     $certificateChain = \str_replace($match[0], '', $certificateChain);
                     $certificate = Certificate::derToPem(Certificate::pemToDer($match[1]));
