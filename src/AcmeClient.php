@@ -143,12 +143,12 @@ final class AcmeClient
     /**
      * Retrieves a resource using a POST request.
      *
-     * @param string $resource Resource to fetch.
-     * @param array  $payload Payload as associative array to send.
+     * @param string     $resource Resource to fetch.
+     * @param array|null $payload Payload as associative array to send.
      *
      * @return Promise Resolves to the HTTP response.
      */
-    public function post(string $resource, array $payload): Promise
+    public function post(string $resource, ?array $payload): Promise
     {
         return call(function () use ($resource, $payload) {
             $url = yield $this->getResourceUrl($resource);
@@ -165,8 +165,6 @@ final class AcmeClient
                     throw new AcmeException("POST request to {$url} failed, received too many errors (last code: ${statusCode}).");
                 }
 
-                $payload['url'] = $payload['url'] ?? $url;
-
                 $accountUrl = $url === $newAccountUrl ? null : $this->accountUrl;
                 if ($url !== $newAccountUrl && $this->accountUrl === null) {
                     /** @var Account $account */
@@ -176,6 +174,7 @@ final class AcmeClient
 
                 $requestBody = $this->cryptoBackend->signJwt(
                     $this->accountKey,
+                    $url,
                     yield $this->getNonce(),
                     $payload,
                     $accountUrl
@@ -207,7 +206,7 @@ final class AcmeClient
                     $this->saveNonce($response);
 
                     if ($statusCode === 400) {
-                        $info = \json_decode($body, true);
+                        $info = \json_decode($body, true, 16, \JSON_THROW_ON_ERROR);
 
                         if (!empty($info['type']) && (\strpos($info['type'], "acme:error:badNonce") !== false)) {
                             $this->nonces = [];

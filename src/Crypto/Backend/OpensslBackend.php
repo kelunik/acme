@@ -52,20 +52,22 @@ final class OpensslBackend implements Backend
      *
      * If accountUrl is provided, it uses the 'kid' field. Otherwise it uses the jwk.
      *
-     * @param array       $payload
+     * @param array|null $payload
      * @param string|null $accountUrl
-     * @param PrivateKey  $privateKey
-     * @param string      $nonce
+     * @param PrivateKey $privateKey
+     * @param string $nonce
      *
      * @return string
      * @throws CryptoException
      * @throws AcmeException
      */
-    public function signJwt(PrivateKey $privateKey, string $nonce, array $payload, ?string $accountUrl = null): string
-    {
-        $url = $payload['url'];
-        unset($payload['url']);
-
+    public function signJwt(
+        PrivateKey $privateKey,
+        string $url,
+        string $nonce,
+        ?array $payload,
+        ?string $accountUrl
+    ): string {
         $jws = [
             'alg' => 'RS256',
             'url' => $url,
@@ -79,7 +81,12 @@ final class OpensslBackend implements Backend
         }
 
         $protected = base64UrlEncode(\json_encode($jws));
-        $payloadString = $payload === [] ? '' : base64UrlEncode(\json_encode($payload));
+
+        if ($payload === null) {
+            $payloadString = '';
+        } else {
+            $payloadString = base64UrlEncode(\json_encode($payload));
+        }
 
         \openssl_sign("$protected.$payloadString", $signed, $privateKey->toPem(), "SHA256");
 
@@ -87,6 +94,6 @@ final class OpensslBackend implements Backend
             'protected' => $protected,
             'payload' => $payloadString,
             'signature' => base64UrlEncode($signed),
-        ]);
+        ], \JSON_THROW_ON_ERROR);
     }
 }

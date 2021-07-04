@@ -86,7 +86,7 @@ class AcmeService
             $this->logger->info('Retrieving order ' . $url);
 
             /** @var Response $response */
-            $response = yield $this->client->post($url, []);
+            $response = yield $this->client->post($url, null);
 
             if ($response->getStatus() === 200) {
                 return Order::fromResponse($url, yield $response->getBody()->buffer());
@@ -176,7 +176,7 @@ class AcmeService
             $this->logger->info('Retrieving authorization ' . $url);
 
             /** @var Response $response */
-            $response = yield $this->client->post($url, []);
+            $response = yield $this->client->post($url, null);
 
             try {
                 return Authorization::fromResponse($url, yield $response->getBody()->buffer());
@@ -199,7 +199,7 @@ class AcmeService
             $this->logger->info('Retrieving challenge ' . $url);
 
             /** @var Response $response */
-            $response = yield $this->client->post($url, []);
+            $response = yield $this->client->post($url, null);
 
             try {
                 return Challenge::fromResponse(yield $response->getBody()->buffer());
@@ -306,7 +306,7 @@ class AcmeService
 
             do {
                 /** @var Response $response */
-                $response = yield $this->client->post($url, []);
+                $response = yield $this->client->post($url, null);
 
                 if ($response->getStatus() === 202) {
                     if (!$response->hasHeader('retry-after')) {
@@ -340,7 +340,7 @@ class AcmeService
                                 $url = resolve($response->getRequest()->getUri(), $match[1]);
 
                                 /** @var Response $response */
-                                $response = yield $this->client->post($url, []);
+                                $response = yield $this->client->post($url, null);
                                 $certificates[] = yield $response->getBody()->buffer();
                                 $hasUplink = true;
                             }
