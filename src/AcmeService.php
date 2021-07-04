@@ -24,7 +24,6 @@ use Psr\Log\LoggerInterface as PsrLogger;
 use Psr\Log\NullLogger;
 use function Amp\call;
 use function Amp\delay;
-use function Sabre\Uri\resolve;
 
 /**
  * High level ACME client.
@@ -350,71 +349,36 @@ class AcmeService
     }
 
     /**
-     * Polls for a certificate.
+     * Downloads the certificate (and parent certificates).
      *
      * @param UriInterface $url URI of the certificate
      *
      * @return Promise Complete certificate chain as array of PEM encoded certificates
      */
-    public function pollForCertificate(UriInterface $url): Promise
+    public function downloadCertificates(UriInterface $url): Promise
     {
         return call(function () use ($url) {
-            $this->logger->info('Polling for certificate ' . $url);
+            $this->logger->info('Downloading certificate ' . $url);
 
-            do {
-                /** @var Response $response */
-                $response = yield $this->client->post($url, null);
+            /** @var Response $response */
+            $response = yield $this->client->post($url, null);
 
-                if ($response->getStatus() === 202) {
-                    if (!$response->hasHeader('retry-after')) {
-                        // throw new AcmeException("Protocol Violation: No Retry-After Header!");
+            if ($response->getStatus() === 200) {
+                $certificateChain = yield $response->getBody()->buffer();
+                $certificates = [];
 
-                        yield delay(1000);
-                        continue;
-                    }
+                while (\preg_match('(-----BEGIN CERTIFICATE-----(.*?)-----END CERTIFICATE-----)', $certificateChain,
+                    $match)) {
+                    $certificateChain = \str_replace($match[0], '', $certificateChain);
+                    $certificate = Certificate::derToPem(Certificate::pemToDer($match[1]));
 
-                    $waitTime = $this->parseRetryAfter($response->getHeader('retry-after'));
-                    $waitTime = \min(\max($waitTime, 2), 60);
-
-                    yield delay($waitTime * 1000);
-                    continue;
+                    $certificates[] = $certificate;
                 }
 
-                if ($response->getStatus() === 200) {
-                    $certificates = [
-                        yield $response->getBody()->buffer(),
-                    ];
+                return $certificates;
+            }
 
-                    // prevent potential infinite loop
-                    $maximumChainLength = 5;
-
-                    while ($response->hasHeader('link')) {
-                        $links = $response->getHeaderArray('link');
-                        $hasUplink = false;
-
-                        foreach ($links as $link) {
-                            if (\preg_match('#<(.*?)>;rel="up"#x', $link, $match)) {
-                                $url = resolve($response->getRequest()->getUri(), $match[1]);
-
-                                /** @var Response $response */
-                                $response = yield $this->client->post($url, null);
-                                $certificates[] = yield $response->getBody()->buffer();
-                                $hasUplink = true;
-                            }
-                        }
-
-                        if (!$hasUplink) {
-                            break; // No uplinks in this response. Break out :)
-                        }
-
-                        if (!$maximumChainLength--) {
-                            throw new AcmeException('Too long certificate chain');
-                        }
-                    }
-
-                    return $certificates;
-                }
-            } while (true);
+            throw $this->generateException($response, yield $response->getBody()->buffer());
         });
     }
 
