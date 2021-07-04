@@ -84,7 +84,7 @@ final class OpensslBackend implements Backend
 
         if ($payload === null) {
             $payloadString = '';
-        } else if ($payload === []) {
+        } elseif ($payload === []) {
             $payloadString = base64UrlEncode('{}');
         } else {
             $payloadString = base64UrlEncode(\json_encode($payload));
