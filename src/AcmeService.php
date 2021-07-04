@@ -17,6 +17,7 @@ use Kelunik\Acme\Protocol\Authorization;
 use Kelunik\Acme\Protocol\Challenge;
 use Kelunik\Acme\Protocol\ChallengeStatus;
 use Kelunik\Acme\Protocol\Order;
+use Kelunik\Acme\Protocol\OrderStatus;
 use Kelunik\Certificate\Certificate;
 use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface as PsrLogger;
@@ -236,15 +237,71 @@ class AcmeService
                     break;
                 }
 
-                // TODO
-                // if (!$response->hasHeader('retry-after')) {
-                yield delay(1000);
-                // } else {
-                //     $waitTime = $this->parseRetryAfter($response->getHeader('retry-after'));
-                //     $waitTime = \max($waitTime, 1);
-//
-                //     yield delay($waitTime * 1000);
-                // }
+                yield delay(3000);
+            } while (true);
+        });
+    }
+
+    /**
+     * Polls until an order is ready.
+     *
+     * @param UriInterface $url URI of the order
+     *
+     * @return Promise<void>
+     */
+    public function pollForOrderReady(UriInterface $url): Promise
+    {
+        return call(function () use ($url) {
+            $this->logger->info('Polling for order to be ready ' . $url);
+
+            do {
+                /** @var Order $order */
+                $order = yield $this->getOrder($url);
+
+                $this->logger->info('Retrieved order ' . $url . ': ' . $order->getStatus());
+
+                if ($order->getStatus() === OrderStatus::INVALID) {
+                    // TODO Use Challenge->getError
+                    throw new AcmeException('Order marked as invalid.');
+                }
+
+                if ($order->getStatus() === OrderStatus::READY) {
+                    break;
+                }
+
+                yield delay(3000);
+            } while (true);
+        });
+    }
+
+    /**
+     * Polls until an order is valid.
+     *
+     * @param UriInterface $url URI of the order
+     *
+     * @return Promise<void>
+     */
+    public function pollForOrderValid(UriInterface $url): Promise
+    {
+        return call(function () use ($url) {
+            $this->logger->info('Polling for order to be valid ' . $url);
+
+            do {
+                /** @var Order $order */
+                $order = yield $this->getOrder($url);
+
+                $this->logger->info('Retrieved order ' . $url . ': ' . $order->getStatus());
+
+                if ($order->getStatus() === OrderStatus::INVALID) {
+                    // TODO Use Challenge->getError
+                    throw new AcmeException('Order marked as invalid.');
+                }
+
+                if ($order->getStatus() === OrderStatus::VALID) {
+                    break;
+                }
+
+                yield delay(3000);
             } while (true);
         });
     }
