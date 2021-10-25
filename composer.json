@@ -33,7 +33,7 @@
         "amphp/amp": "^2",
         "amphp/http-client": "^4",
         "sabre/uri": "^1",
-        "psr/log": "^1",
+        "psr/log": "^1 || ^2 || ^3",
         "kelunik/certificate": "^1.1",
         "amphp/file": "^2.0",
         "beberlei/assert": "^3.3"
