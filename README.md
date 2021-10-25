@@ -6,7 +6,7 @@
 
 **Required PHP Version**
 
-- PHP 7.2+
+- PHP 7.4+
 
 **Installation**
 
@@ -14,13 +14,9 @@
 composer require kelunik/acme
 ```
 
-This package follows semantic versioning. Although there's no `v1.0.0` yet, it's safe to use it as a dependency, because breaking changes won't be installed when using it as `^0.3`.
-
-**[Documentation](https://docs.kelunik.com/kelunik/acme)**
-
-The library is fully documented using PHPDoc.
+This package follows semantic versioning.
 
 **Usage**
 
-If you're not familiar with promises and `amphp/amp` yet, read my [blog post to get started](http://blog.kelunik.com/2015/09/20/getting-started-with-amp.html).
+You should be familiar with promises and [`amphp/amp`](https://github.com/amphp/amp).
 You can always use `Amp\Promise\wait` to use this async library in synchronous code.
