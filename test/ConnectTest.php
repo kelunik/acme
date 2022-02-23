@@ -16,15 +16,14 @@ class ConnectTest extends AsyncTestCase
      *
      * @dataProvider provideCryptoConnectArgs
      */
-    public function testCryptoConnect($uri)
+    public function testCryptoConnect($uri): void
     {
         $this->expectNotToPerformAssertions();
 
         $context = (new ConnectContext)->withTlsContext(new ClientTlsContext(\parse_url($uri, \PHP_URL_HOST)));
 
-        /** @var EncryptableSocket $sock */
-        $sock = yield connect($uri, $context);
-        yield $sock->setupTls();
+        $sock = connect($uri, $context);
+        $sock->setupTls();
     }
 
     public function provideCryptoConnectArgs(): iterable

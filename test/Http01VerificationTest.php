@@ -23,25 +23,24 @@ class Http01VerificationTest extends AsyncTestCase
     /**
      * @test
      */
-    public function ignoresWrongPeerName(): \Generator
+    public function ignoresWrongPeerName(): void
     {
         self::markTestSkipped('Currently skipped as configuration is not in place for it.');
 
-        /** @var Response $payloadResponse */
-        $payloadResponse = yield HttpClientBuilder::buildDefault()->request('http://blog.kelunik.com/robots.txt');
+        $payloadResponse = HttpClientBuilder::buildDefault()->request('http://blog.kelunik.com/robots.txt');
         $payload = \trim($payloadResponse->getBody());
 
-        yield $this->verifier->verifyChallenge('kelunik.com', 'invalid-common-name', $payload);
+        $this->verifier->verifyChallenge('kelunik.com', 'invalid-common-name', $payload);
     }
 
     /**
      * @test
      */
-    public function failsOnWrongPayload(): \Generator
+    public function failsOnWrongPayload(): void
     {
         $this->expectException(AcmeException::class);
         $this->expectExceptionMessage('Verification failed');
 
-        yield $this->verifier->verifyChallenge('kelunik.com', 'abcdef', 'foobar');
+        $this->verifier->verifyChallenge('kelunik.com', 'abcdef', 'foobar');
     }
 }

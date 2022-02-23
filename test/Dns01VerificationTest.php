@@ -30,67 +30,67 @@ class Dns01VerificationTest extends AsyncTestCase
     /**
      * @test
      */
-    public function failsOnDnsNotFound(): \Generator
+    public function failsOnDnsNotFound(): void
     {
         $this->expectException(AcmeException::class);
         $this->expectExceptionMessage('Verification failed, no TXT record found for \'_acme-challenge.example.com\'.');
 
-        $this->resolver->method("query")->willReturn(new Failure(new NoRecordException));
-        yield $this->verifier->verifyChallenge("example.com", "foobar");
+        $this->resolver->method("query")->willThrowException(new NoRecordException);
+        $this->verifier->verifyChallenge("example.com", "foobar");
     }
 
     /**
      * @test
      */
-    public function failsOnGeneralDnsIssue(): \Generator
+    public function failsOnGeneralDnsIssue(): void
     {
         $this->expectException(AcmeException::class);
         $this->expectExceptionMessage('Verification failed, couldn\'t query TXT record of \'_acme-challenge.example.com\'');
 
-        $this->resolver->method("query")->willReturn(new Failure(new DnsException));
-        yield $this->verifier->verifyChallenge("example.com", "foobar");
+        $this->resolver->method("query")->willThrowException(new DnsException);
+        $this->verifier->verifyChallenge("example.com", "foobar");
     }
 
     /**
      * @test
      */
-    public function failsOnWrongPayload(): \Generator
+    public function failsOnWrongPayload(): void
     {
         $this->expectException(AcmeException::class);
         $this->expectExceptionMessage("Verification failed, please check DNS record for '_acme-challenge.example.com'.");
 
-        $this->resolver->method("query")->willReturn(new Success([new Record("xyz", Record::TXT, 300)]));
-        yield $this->verifier->verifyChallenge("example.com", "foobar");
+        $this->resolver->method("query")->willReturn([new Record("xyz", Record::TXT, 300)]);
+        $this->verifier->verifyChallenge("example.com", "foobar");
     }
 
     /**
      * @test
      */
-    public function succeedsOnRightPayload(): \Generator
+    public function succeedsOnRightPayload(): void
     {
         $this->expectNotToPerformAssertions();
 
-        $this->resolver->method("query")->willReturn(new Success([new Record("foobar", Record::TXT, 300)]));
-        yield $this->verifier->verifyChallenge("example.com", "foobar");
+        $this->resolver->method("query")->willReturn([new Record("foobar", Record::TXT, 300)]);
+        $this->verifier->verifyChallenge("example.com", "foobar");
     }
 
     /**
      * @test
      */
-    public function failsWithDomainNotString(): \Generator
+    public function failsWithDomainNotString(): void
     {
         $this->expectException(\TypeError::class);
 
-        yield $this->verifier->verifyChallenge(null, "");
+        $this->verifier->verifyChallenge(null, "");
     }
 
     /**
      * @test
      */
-    public function failsWithPayloadNotString(): \Generator
+    public function failsWithPayloadNotString(): void
     {
         $this->expectException(\TypeError::class);
 
-        yield $this->verifier->verifyChallenge("example.com", null);
+        $this->verifier->verifyChallenge("example.com", null);
     }
 }

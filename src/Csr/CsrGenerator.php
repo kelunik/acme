@@ -26,8 +26,8 @@ interface CsrGenerator
      * @param PrivateKey $key Key to use for signing.
      * @param array      $domains List of domain names.
      *
-     * @return Promise Resolves to a string (PEM encoded CSR).
+     * @return string Resolves to a string (PEM encoded CSR).
      * @throws AcmeException If CSR generation fails.
      */
-    public function generateCsr(PrivateKey $key, array $domains): Promise;
+    public function generateCsr(PrivateKey $key, array $domains): string;
 }

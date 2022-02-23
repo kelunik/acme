@@ -52,48 +52,42 @@ class AcmeService
      * @param string $email e-mail address for contact
      * @param bool   $agreement
      *
-     * @return Promise<Account>
+     * @return Account
      *
      * @see https://datatracker.ietf.org/doc/html/rfc8555#section-7.3
      */
-    public function register(string $email, bool $agreement = false): Promise
+    public function register(string $email, bool $agreement = false): Account
     {
-        return call(function () use ($email, $agreement) {
-            $this->logger->info('Creating new account with email ' . $email);
+        $this->logger->info('Creating new account with email ' . $email);
 
-            /** @var Response $response */
-            $response = yield $this->client->post(AcmeResource::NEW_ACCOUNT, [
-                'termsOfServiceAgreed' => $agreement,
-                'contact' => [
-                    "mailto:{$email}",
-                ],
-            ]);
+        $response = $this->client->post(AcmeResource::NEW_ACCOUNT, [
+            'termsOfServiceAgreed' => $agreement,
+            'contact' => [
+                "mailto:{$email}",
+            ],
+        ]);
 
-            if (\in_array($response->getStatus(), [200, 201], true)) {
-                return Account::fromResponse($response->getHeader('location'), yield $response->getBody()->buffer());
-            }
+        if (\in_array($response->getStatus(), [200, 201], true)) {
+            return Account::fromResponse($response->getHeader('location'), $response->getBody()->buffer());
+        }
 
-            throw $this->generateException($response, yield $response->getBody()->buffer());
-        });
+        throw $this->generateException($response, $response->getBody()->buffer());
     }
 
     /**
      * Retrieves existing order using the order's location URL.
      */
-    public function getOrder(UriInterface $url): Promise
+    public function getOrder(UriInterface $url): Order
     {
-        return call(function () use ($url) {
-            $this->logger->info('Retrieving order ' . $url);
+        $this->logger->info('Retrieving order ' . $url);
 
-            /** @var Response $response */
-            $response = yield $this->client->post($url, null);
+        $response = $this->client->post($url, null);
 
-            if ($response->getStatus() === 200) {
-                return Order::fromResponse($url, yield $response->getBody()->buffer());
-            }
+        if ($response->getStatus() === 200) {
+            return Order::fromResponse($url, $response->getBody()->buffer());
+        }
 
-            throw $this->generateException($response, yield $response->getBody()->buffer());
-        });
+        throw $this->generateException($response, $response->getBody()->buffer());
     }
 
     /**
@@ -103,41 +97,38 @@ class AcmeService
      * @param \DateTimeInterface|null $notBefore The requested value of the notBefore field in the certificate
      * @param \DateTimeInterface|null $notAfter The requested value of the notAfter field in the certificate
      *
-     * @return Promise<Order>
+     * @return Order
      */
     public function newOrder(
         array $domainNames,
         ?\DateTimeInterface $notBefore = null,
         ?\DateTimeInterface $notAfter = null
-    ): Promise {
-        return call(function () use ($domainNames, $notBefore, $notAfter) {
-            $this->logger->info('Creating new order for ' . \implode(', ', $domainNames));
+    ): Order {
+        $this->logger->info('Creating new order for ' . \implode(', ', $domainNames));
 
-            $request = [
-                'identifiers' => [],
-            ];
+        $request = [
+            'identifiers' => [],
+        ];
 
-            foreach ($domainNames as $domainName) {
-                $request['identifiers'][] = ['type' => 'dns', 'value' => $domainName];
-            }
+        foreach ($domainNames as $domainName) {
+            $request['identifiers'][] = ['type' => 'dns', 'value' => $domainName];
+        }
 
-            if ($notBefore) {
-                $request['notBefore'] = formatDate($notBefore);
-            }
+        if ($notBefore) {
+            $request['notBefore'] = formatDate($notBefore);
+        }
 
-            if ($notAfter) {
-                $request['notAfter'] = formatDate($notAfter);
-            }
+        if ($notAfter) {
+            $request['notAfter'] = formatDate($notAfter);
+        }
 
-            /** @var Response $response */
-            $response = yield $this->client->post(AcmeResource::NEW_ORDER, $request);
+        $response = $this->client->post(AcmeResource::NEW_ORDER, $request);
 
-            if ($response->getStatus() === 201) {
-                return Order::fromResponse($response->getHeader('location'), yield $response->getBody()->buffer());
-            }
+        if ($response->getStatus() === 201) {
+            return Order::fromResponse($response->getHeader('location'), $response->getBody()->buffer());
+        }
 
-            throw $this->generateException($response, yield $response->getBody()->buffer());
-        });
+        throw $this->generateException($response, $response->getBody()->buffer());
     }
 
     /**
@@ -145,22 +136,19 @@ class AcmeService
      *
      * @param UriInterface $url URI of the challenge
      *
-     * @return Promise<Challenge>
+     * @return Challenge
      */
-    public function finalizeChallenge(UriInterface $url): Promise
+    public function finalizeChallenge(UriInterface $url): Challenge
     {
-        return call(function () use ($url) {
-            $this->logger->info('Finalizing challenge ' . $url);
+        $this->logger->info('Finalizing challenge ' . $url);
 
-            /** @var Response $response */
-            $response = yield $this->client->post($url, []);
+        $response = $this->client->post($url, []);
 
-            try {
-                return Challenge::fromResponse(yield $response->getBody()->buffer());
-            } catch (\Throwable $_) {
-                throw $this->generateException($response, yield $response->getBody()->buffer());
-            }
-        });
+        try {
+            return Challenge::fromResponse($response->getBody()->buffer());
+        } catch (\Throwable $_) {
+            throw $this->generateException($response, $response->getBody()->buffer());
+        }
     }
 
     /**
@@ -168,22 +156,19 @@ class AcmeService
      *
      * @param UriInterface $url
      *
-     * @return Promise<Authorization>
+     * @return Authorization
      */
-    public function getAuthorization(UriInterface $url): Promise
+    public function getAuthorization(UriInterface $url): Authorization
     {
-        return call(function () use ($url) {
-            $this->logger->info('Retrieving authorization ' . $url);
+        $this->logger->info('Retrieving authorization ' . $url);
 
-            /** @var Response $response */
-            $response = yield $this->client->post($url, null);
+        $response = $this->client->post($url, null);
 
-            try {
-                return Authorization::fromResponse($url, yield $response->getBody()->buffer());
-            } catch (\Throwable $_) {
-                throw $this->generateException($response, yield $response->getBody()->buffer());
-            }
-        });
+        try {
+            return Authorization::fromResponse($url, $response->getBody()->buffer());
+        } catch (\Throwable $_) {
+            throw $this->generateException($response, $response->getBody()->buffer());
+        }
     }
 
     /**
@@ -191,22 +176,19 @@ class AcmeService
      *
      * @param UriInterface $url
      *
-     * @return Promise<Challenge>
+     * @return Challenge
      */
-    public function getChallenge(UriInterface $url): Promise
+    public function getChallenge(UriInterface $url): Challenge
     {
-        return call(function () use ($url) {
-            $this->logger->info('Retrieving challenge ' . $url);
+        $this->logger->info('Retrieving challenge ' . $url);
 
-            /** @var Response $response */
-            $response = yield $this->client->post($url, null);
+        $response = $this->client->post($url, null);
 
-            try {
-                return Challenge::fromResponse(yield $response->getBody()->buffer());
-            } catch (\Throwable $_) {
-                throw $this->generateException($response, yield $response->getBody()->buffer());
-            }
-        });
+        try {
+            return Challenge::fromResponse($response->getBody()->buffer());
+        } catch (\Throwable $_) {
+            throw $this->generateException($response, $response->getBody()->buffer());
+        }
     }
 
     /**
@@ -214,31 +196,28 @@ class AcmeService
      *
      * @param UriInterface $url URI of the authorization
      *
-     * @return Promise<void>
+     * @return void
      */
-    public function pollForAuthorization(UriInterface $url): Promise
+    public function pollForAuthorization(UriInterface $url): void
     {
-        return call(function () use ($url) {
-            $this->logger->info('Polling for authorization ' . $url);
+        $this->logger->info('Polling for authorization ' . $url);
 
-            do {
-                /** @var Authorization $authorization */
-                $authorization = yield $this->getAuthorization($url);
+        do {
+            $authorization = $this->getAuthorization($url);
 
-                $this->logger->info('Retrieved authorization ' . $url . ': ' . $authorization->getStatus());
+            $this->logger->info('Retrieved authorization ' . $url . ': ' . $authorization->getStatus());
 
-                if ($authorization->getStatus() === ChallengeStatus::INVALID) {
-                    // TODO Use Challenge->getError
-                    throw new AcmeException('Authorization marked as invalid.');
-                }
+            if ($authorization->getStatus() === ChallengeStatus::INVALID) {
+                // TODO Use Challenge->getError
+                throw new AcmeException('Authorization marked as invalid.');
+            }
 
-                if ($authorization->getStatus() === ChallengeStatus::VALID) {
-                    break;
-                }
+            if ($authorization->getStatus() === ChallengeStatus::VALID) {
+                break;
+            }
 
-                yield delay(3000);
-            } while (true);
-        });
+            delay(3000);
+        } while (true);
     }
 
     /**
@@ -246,31 +225,28 @@ class AcmeService
      *
      * @param UriInterface $url URI of the order
      *
-     * @return Promise<void>
+     * @return void
      */
-    public function pollForOrderReady(UriInterface $url): Promise
+    public function pollForOrderReady(UriInterface $url): void
     {
-        return call(function () use ($url) {
-            $this->logger->info('Polling for order to be ready ' . $url);
+        $this->logger->info('Polling for order to be ready ' . $url);
 
-            do {
-                /** @var Order $order */
-                $order = yield $this->getOrder($url);
+        do {
+            $order = $this->getOrder($url);
 
-                $this->logger->info('Retrieved order ' . $url . ': ' . $order->getStatus());
+            $this->logger->info('Retrieved order ' . $url . ': ' . $order->getStatus());
 
-                if ($order->getStatus() === OrderStatus::INVALID) {
-                    // TODO Use Challenge->getError
-                    throw new AcmeException('Order marked as invalid.');
-                }
+            if ($order->getStatus() === OrderStatus::INVALID) {
+                // TODO Use Challenge->getError
+                throw new AcmeException('Order marked as invalid.');
+            }
 
-                if ($order->getStatus() === OrderStatus::READY) {
-                    break;
-                }
+            if ($order->getStatus() === OrderStatus::READY) {
+                break;
+            }
 
-                yield delay(3000);
-            } while (true);
-        });
+            delay(3000);
+        } while (true);
     }
 
     /**
@@ -278,31 +254,28 @@ class AcmeService
      *
      * @param UriInterface $url URI of the order
      *
-     * @return Promise<void>
+     * @return void
      */
-    public function pollForOrderValid(UriInterface $url): Promise
+    public function pollForOrderValid(UriInterface $url): void
     {
-        return call(function () use ($url) {
-            $this->logger->info('Polling for order to be valid ' . $url);
+        $this->logger->info('Polling for order to be valid ' . $url);
 
-            do {
-                /** @var Order $order */
-                $order = yield $this->getOrder($url);
+        do {
+            $order = $this->getOrder($url);
 
-                $this->logger->info('Retrieved order ' . $url . ': ' . $order->getStatus());
+            $this->logger->info('Retrieved order ' . $url . ': ' . $order->getStatus());
 
-                if ($order->getStatus() === OrderStatus::INVALID) {
-                    // TODO Use Challenge->getError
-                    throw new AcmeException('Order marked as invalid.');
-                }
+            if ($order->getStatus() === OrderStatus::INVALID) {
+                // TODO Use Challenge->getError
+                throw new AcmeException('Order marked as invalid.');
+            }
 
-                if ($order->getStatus() === OrderStatus::VALID) {
-                    break;
-                }
+            if ($order->getStatus() === OrderStatus::VALID) {
+                break;
+            }
 
-                yield delay(3000);
-            } while (true);
-        });
+            delay(3000);
+        } while (true);
     }
 
     /**
@@ -311,41 +284,39 @@ class AcmeService
      * @param UriInterface $url
      * @param string       $csr certificate signing request
      *
-     * @return Promise<Order>
+     * @return Order
      */
-    public function finalizeOrder(UriInterface $url, string $csr): Promise
+    public function finalizeOrder(UriInterface $url, string $csr): Order
     {
-        return call(function () use ($url, $csr) {
-            $this->logger->info('Finalizing order ' . $url);
+        $this->logger->info('Finalizing order ' . $url);
 
-            $begin = 'REQUEST-----';
-            $end = '----END';
+        $begin = 'REQUEST-----';
+        $end = '----END';
 
-            $beginPos = \strpos($csr, $begin);
-            if ($beginPos === false) {
-                throw new InvalidArgumentException("Invalid CSR, maybe not in PEM format?\n{$csr}");
-            }
+        $beginPos = \strpos($csr, $begin);
+        if ($beginPos === false) {
+            throw new InvalidArgumentException("Invalid CSR, maybe not in PEM format?\n{$csr}");
+        }
 
-            $csr = \substr($csr, $beginPos + \strlen($begin));
+        $csr = \substr($csr, $beginPos + \strlen($begin));
 
-            $endPos = \strpos($csr, $end);
-            if ($endPos === false) {
-                throw new InvalidArgumentException("Invalid CSR, maybe not in PEM format?\n{$csr}");
-            }
+        $endPos = \strpos($csr, $end);
+        if ($endPos === false) {
+            throw new InvalidArgumentException("Invalid CSR, maybe not in PEM format?\n{$csr}");
+        }
 
-            $csr = \substr($csr, 0, $endPos);
+        $csr = \substr($csr, 0, $endPos);
 
-            /** @var Response $response */
-            $response = yield $this->client->post($url, [
-                'csr' => base64UrlEncode(\base64_decode($csr)),
-            ]);
+        /** @var Response $response */
+        $response = $this->client->post($url, [
+            'csr' => base64UrlEncode(\base64_decode($csr)),
+        ]);
 
-            if ($response->getStatus() === 200) {
-                return Order::fromResponse($response->getHeader('location'), yield $response->getBody()->buffer());
-            }
+        if ($response->getStatus() === 200) {
+            return Order::fromResponse($response->getHeader('location'), $response->getBody()->buffer());
+        }
 
-            throw $this->generateException($response, yield $response->getBody()->buffer());
-        });
+        throw $this->generateException($response, $response->getBody()->buffer());
     }
 
     /**
@@ -353,36 +324,33 @@ class AcmeService
      *
      * @param UriInterface $url URI of the certificate
      *
-     * @return Promise Complete certificate chain as array of PEM encoded certificates
+     * @return Certificate[] Complete certificate chain as array of PEM encoded certificates
      */
-    public function downloadCertificates(UriInterface $url): Promise
+    public function downloadCertificates(UriInterface $url): array
     {
-        return call(function () use ($url) {
-            $this->logger->info('Downloading certificate ' . $url);
+        $this->logger->info('Downloading certificate ' . $url);
 
-            /** @var Response $response */
-            $response = yield $this->client->post($url, null);
+        $response = $this->client->post($url, null);
 
-            if ($response->getStatus() === 200) {
-                $certificateChain = yield $response->getBody()->buffer();
-                $certificates = [];
+        if ($response->getStatus() === 200) {
+            $certificateChain = $response->getBody()->buffer();
+            $certificates = [];
 
-                while (\preg_match(
-                    '(-----BEGIN CERTIFICATE-----(.*?)-----END CERTIFICATE-----)si',
-                    $certificateChain,
-                    $match
-                )) {
-                    $certificateChain = \str_replace($match[0], '', $certificateChain);
-                    $certificate = Certificate::derToPem(Certificate::pemToDer($match[0]));
+            while (\preg_match(
+                '(-----BEGIN CERTIFICATE-----(.*?)-----END CERTIFICATE-----)si',
+                $certificateChain,
+                $match
+            )) {
+                $certificateChain = \str_replace($match[0], '', $certificateChain);
+                $certificate = Certificate::derToPem(Certificate::pemToDer($match[0]));
 
-                    $certificates[] = $certificate;
-                }
-
-                return $certificates;
+                $certificates[] = $certificate;
             }
 
-            throw $this->generateException($response, yield $response->getBody()->buffer());
-        });
+            return $certificates;
+        }
+
+        throw $this->generateException($response, $response->getBody()->buffer());
     }
 
     /**
@@ -390,24 +358,21 @@ class AcmeService
      *
      * @param string $pem PEM encoded certificate
      *
-     * @return Promise<void>
+     * @return void
      */
-    public function revokeCertificate(string $pem): Promise
+    public function revokeCertificate(string $pem): void
     {
-        return call(function () use ($pem) {
-            $this->logger->info('Revoking certificate ' . $pem);
+        $this->logger->info('Revoking certificate ' . $pem);
 
-            /** @var Response $response */
-            $response = yield $this->client->post(AcmeResource::REVOKE_CERTIFICATE, [
-                'certificate' => base64UrlEncode(Certificate::pemToDer($pem)),
-            ]);
+        $response = $this->client->post(AcmeResource::REVOKE_CERTIFICATE, [
+            'certificate' => base64UrlEncode(Certificate::pemToDer($pem)),
+        ]);
 
-            if ($response->getStatus() === 200) {
-                return;
-            }
+        if ($response->getStatus() === 200) {
+            return;
+        }
 
-            throw $this->generateException($response, yield $response->getBody()->buffer());
-        });
+        throw $this->generateException($response, $response->getBody()->buffer());
     }
 
     /**
