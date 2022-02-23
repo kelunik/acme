@@ -11,11 +11,9 @@ namespace Kelunik\Acme\Csr;
 
 use Amp\Dns\InvalidNameException;
 use Amp\File;
-use Amp\Promise;
 use Kelunik\Acme\AcmeException;
 use Kelunik\Acme\Crypto\CryptoException;
 use Kelunik\Acme\Crypto\PrivateKey;
-use function Amp\call;
 use function Amp\Dns\normalizeName;
 
 /**
@@ -46,33 +44,32 @@ final class OpensslCsrGenerator implements CsrGenerator
     }
 
     /** @inheritdoc */
-    public function generateCsr(PrivateKey $key, array $domains): Promise
+    public function generateCsr(PrivateKey $key, array $domains): string
     {
-        return call(function () use ($key, $domains) {
-            /** @var \OpenSSLAsymmetricKey $privateKey */
-            if (!$privateKey = \openssl_pkey_get_private($key->toPem())) {
-                throw new CryptoException('OpenSSL considered the private key invalid.');
-            }
+        /** @var \OpenSSLAsymmetricKey $privateKey */
+        if (!$privateKey = \openssl_pkey_get_private($key->toPem())) {
+            throw new CryptoException('OpenSSL considered the private key invalid.');
+        }
 
-            if (!$domains) {
-                throw new AcmeException('Parameter $domains must not be empty.');
-            }
+        if (!$domains) {
+            throw new AcmeException('Parameter $domains must not be empty.');
+        }
 
-            try {
-                $san = \implode(',', \array_map(static function ($dns) {
-                    // throws on invalid DNS names
-                    return "DNS:" . normalizeName($dns);
-                }, $domains));
-            } catch (InvalidNameException $e) {
-                throw new AcmeException('Invalid domain name: ' . $e->getMessage());
-            }
+        try {
+            $san = \implode(',', \array_map(static function ($dns) {
+                // throws on invalid DNS names
+                return "DNS:" . normalizeName($dns);
+            }, $domains));
+        } catch (InvalidNameException $e) {
+            throw new AcmeException('Invalid domain name: ' . $e->getMessage());
+        }
 
-            // http://www.heise.de/netze/rfc/rfcs/rfc7633.shtml
-            // http://www.heise.de/netze/rfc/rfcs/rfc6066.shtml
-            $mustStaple = $this->mustStaple ? 'tlsfeature = status_request' : '';
+        // http://www.heise.de/netze/rfc/rfcs/rfc7633.shtml
+        // http://www.heise.de/netze/rfc/rfcs/rfc6066.shtml
+        $mustStaple = $this->mustStaple ? 'tlsfeature = status_request' : '';
 
-            $tempFile = \tempnam(\sys_get_temp_dir(), 'acme-openssl-config-');
-            $tempConf = <<<EOL
+        $tempFile = \tempnam(\sys_get_temp_dir(), 'acme-openssl-config-');
+        $tempConf = <<<EOL
 [ req ]
 distinguished_name = req_distinguished_name
 req_extensions = v3_req
@@ -86,35 +83,34 @@ keyUsage = nonRepudiation, digitalSignature, keyEncipherment
 subjectAltName = {$san}
 EOL;
 
-            yield File\write($tempFile, $tempConf);
+        File\write($tempFile, $tempConf);
 
-            try {
-                \set_error_handler(static function ($errno, $errstr) {
-                    throw new CryptoException($errstr);
-                });
+        try {
+            \set_error_handler(static function ($errno, $errstr) {
+                throw new CryptoException($errstr);
+            });
 
-                $csr = \openssl_csr_new([
-                    'CN' => \reset($domains),
-                ], $privateKey, [
-                    'digest_alg' => 'sha256',
-                    'req_extensions' => 'v3_req',
-                    'config' => $tempFile,
-                ]);
-            } finally {
-                \restore_error_handler();
-            }
+            $csr = \openssl_csr_new([
+                'CN' => \reset($domains),
+            ], $privateKey, [
+                'digest_alg' => 'sha256',
+                'req_extensions' => 'v3_req',
+                'config' => $tempFile,
+            ]);
+        } finally {
+            \restore_error_handler();
+        }
 
-            yield File\deleteFile($tempFile);
+        File\deleteFile($tempFile);
 
-            if (!$csr) {
-                throw new AcmeException('A CSR resource could not be generated.');
-            }
+        if (!$csr) {
+            throw new AcmeException('A CSR resource could not be generated.');
+        }
 
-            if (!\openssl_csr_export($csr, $csrOut)) {
-                throw new AcmeException('A CSR resource could not be exported as a string.');
-            }
+        if (!\openssl_csr_export($csr, $csrOut)) {
+            throw new AcmeException('A CSR resource could not be exported as a string.');
+        }
 
-            return $csrOut;
-        });
+        return $csrOut;
     }
 }

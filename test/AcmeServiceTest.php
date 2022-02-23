@@ -40,26 +40,26 @@ class AcmeServiceTest extends AsyncTestCase
     /**
      * @test
      */
-    public function registerNotAgreeTOS(): \Generator
+    public function registerNotAgreeTOS(): void
     {
         $this->expectException(AcmeException::class);
         $this->expectExceptionMessage('Provided account did not agree to the terms of service');
 
-        yield $this->service->register('me@example.com');
+        $this->service->register('me@example.com');
     }
 
     /**
      * @test
      */
-    public function registerAndReRegisterGivesSameLocation(): \Generator
+    public function registerAndReRegisterGivesSameLocation(): void
     {
         /** @var Account $account */
-        $account = yield $this->service->register('me@example.com', true);
+        $account = $this->service->register('me@example.com', true);
         $this->assertSame('mailto:me@example.com', (string) $account->getContacts()[0]);
         $this->assertNotNull($l1 = (string) $account->getUrl());
 
         /** @var Account $account */
-        $account = yield $this->service->register('me@example.com', true);
+        $account = $this->service->register('me@example.com', true);
         $this->assertSame('mailto:me@example.com', (string) $account->getContacts()[0]);
         $this->assertNotNull($l2 = (string) $account->getUrl());
 

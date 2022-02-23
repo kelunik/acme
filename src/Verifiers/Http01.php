@@ -52,24 +52,20 @@ final class Http01
      * @param string $token Challenge token.
      * @param string $expectedPayload Expected payload.
      *
-     * @return Promise Resolves successfully if the challenge has been successfully verified, otherwise fails.
+     * @return void Resolves successfully if the challenge has been successfully verified, otherwise fails.
      * @throws AcmeException If the challenge could not be verified.
      * @api
      */
-    public function verifyChallenge(string $domain, string $token, string $expectedPayload): Promise
+    public function verifyChallenge(string $domain, string $token, string $expectedPayload): void
     {
-        return call(function () use ($domain, $token, $expectedPayload) {
-            $uri = "http://{$domain}/.well-known/acme-challenge/{$token}";
+        $uri = "http://{$domain}/.well-known/acme-challenge/{$token}";
 
-            /** @var Response $response */
-            $response = yield $this->httpClient->request(new Request($uri));
+        $response = $this->httpClient->request(new Request($uri));
 
-            /** @var string $body */
-            $body = yield $response->getBody()->buffer();
+        $body = $response->getBody()->buffer();
 
-            if (\rtrim($expectedPayload) !== \rtrim($body)) {
-                throw new AcmeException("Verification failed, please check the response body for '{$uri}'. It contains '{$body}' but '{$expectedPayload}' was expected.");
-            }
-        });
+        if (\rtrim($expectedPayload) !== \rtrim($body)) {
+            throw new AcmeException("Verification failed, please check the response body for '{$uri}'. It contains '{$body}' but '{$expectedPayload}' was expected.");
+        }
     }
 }

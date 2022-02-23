@@ -42,38 +42,35 @@ final class Dns01
      * @param string $domain domain to verify
      * @param string $expectedPayload expected DNS record value
      *
-     * @return Promise Resolves successfully if the challenge has been successfully verified, otherwise fails.
+     * @return void Resolves successfully if the challenge has been successfully verified, otherwise fails.
      * @throws AcmeException If the challenge could not be verified.
      * @api
      */
-    public function verifyChallenge(string $domain, string $expectedPayload): Promise
+    public function verifyChallenge(string $domain, string $expectedPayload): void
     {
-        return call(function () use ($domain, $expectedPayload) {
-            $uri = '_acme-challenge.' . $domain;
+        $uri = '_acme-challenge.' . $domain;
 
-            try {
-                /** @var Dns\Record[] $dnsRecords */
-                $dnsRecords = yield $this->resolver->query($uri, Dns\Record::TXT);
-            } catch (Dns\NoRecordException $e) {
-                throw new AcmeException("Verification failed, no TXT record found for '{$uri}'.", 0, $e);
-            } catch (Dns\DnsException $e) {
-                throw new AcmeException(
-                    "Verification failed, couldn't query TXT record of '{$uri}': " . $e->getMessage(),
-                    0,
-                    $e
-                );
-            }
+        try {
+            $dnsRecords = $this->resolver->query($uri, Dns\Record::TXT);
+        } catch (Dns\NoRecordException $e) {
+            throw new AcmeException("Verification failed, no TXT record found for '{$uri}'.", 0, $e);
+        } catch (Dns\DnsException $e) {
+            throw new AcmeException(
+                "Verification failed, couldn't query TXT record of '{$uri}': " . $e->getMessage(),
+                0,
+                $e
+            );
+        }
 
-            $values = [];
+        $values = [];
 
-            foreach ($dnsRecords as $dnsRecord) {
-                $values[] = $dnsRecord->getValue();
-            }
+        foreach ($dnsRecords as $dnsRecord) {
+            $values[] = $dnsRecord->getValue();
+        }
 
-            if (!\in_array($expectedPayload, $values, true)) {
-                $values = "'" . \implode("', '", $values) . "'";
-                throw new AcmeException("Verification failed, please check DNS record for '{$uri}'. It contains {$values} but '{$expectedPayload}' was expected.");
-            }
-        });
+        if (!\in_array($expectedPayload, $values, true)) {
+            $values = "'" . \implode("', '", $values) . "'";
+            throw new AcmeException("Verification failed, please check DNS record for '{$uri}'. It contains {$values} but '{$expectedPayload}' was expected.");
+        }
     }
 }

@@ -38,39 +38,39 @@ class OpensslCsrGeneratorTest extends AsyncTestCase
     /**
      * @test
      */
-    public function failsWithInvalidKey(): \Generator
+    public function failsWithInvalidKey(): void
     {
         $this->expectException(AcmeException::class);
 
-        yield $this->csrGenerator->generateCsr(new PrivateKey('foo'), ['example.com']);
+        $this->csrGenerator->generateCsr(new PrivateKey('foo'), ['example.com']);
     }
 
     /**
      * @test
      */
-    public function failsWithNoDomains(): \Generator
+    public function failsWithNoDomains(): void
     {
         $this->expectException(AcmeException::class);
 
-        yield $this->csrGenerator->generateCsr($this->keyGenerator->generateKey(), []);
+        $this->csrGenerator->generateCsr($this->keyGenerator->generateKey(), []);
     }
 
     /**
      * @test
      */
-    public function failsWithInvalidDomain(): \Generator
+    public function failsWithInvalidDomain(): void
     {
         $this->expectException(AcmeException::class);
 
-        yield $this->csrGenerator->generateCsr($this->keyGenerator->generateKey(), ['foo,bar']);
+        $this->csrGenerator->generateCsr($this->keyGenerator->generateKey(), ['foo,bar']);
     }
 
     /**
      * @test
      */
-    public function succeedsOtherwise(): \Generator
+    public function succeedsOtherwise(): void
     {
-        $csr = yield $this->csrGenerator->generateCsr($this->keyGenerator->generateKey(), ['example.com']);
+        $csr = $this->csrGenerator->generateCsr($this->keyGenerator->generateKey(), ['example.com']);
         $this->assertIsString($csr);
     }
 }
