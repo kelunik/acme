@@ -216,7 +216,7 @@ class AcmeService
                 break;
             }
 
-            delay(3000);
+            delay(3);
         } while (true);
     }
 
@@ -245,7 +245,7 @@ class AcmeService
                 break;
             }
 
-            delay(3000);
+            delay(3);
         } while (true);
     }
 
@@ -274,7 +274,7 @@ class AcmeService
                 break;
             }
 
-            delay(3000);
+            delay(3);
         } while (true);
     }
 
