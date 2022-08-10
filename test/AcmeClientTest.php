@@ -18,6 +18,7 @@ use Amp\Socket\ClientTlsContext;
 use Amp\Socket\ConnectContext;
 use Kelunik\Acme\Crypto\RsaKeyGenerator;
 use ReflectionClass;
+use function Amp\Dns\createDefaultResolver;
 use function Amp\Dns\resolver;
 
 class AcmeClientTest extends AsyncTestCase
@@ -33,6 +34,13 @@ class AcmeClientTest extends AsyncTestCase
             null,
             (new ConnectContext)->withTlsContext((new ClientTlsContext(''))->withoutPeerVerification())
         ));
+    }
+
+    protected function tearDown(): void
+    {
+        parent::tearDown();
+
+        resolver(createDefaultResolver());
     }
 
     /**
