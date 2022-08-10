@@ -61,6 +61,9 @@ jobs:
       - name: Start boulder
         run: test/.run-boulder.sh
 
+      - name: Wait for boulder
+        run: while ! nc -z localhost 14000; do sleep 0.1; done
+
       - name: Run tests
         run: BOULDER_HOST="https://127.0.0.1:14000" vendor/bin/phpunit ${{ matrix.phpunit-flags }}
 
