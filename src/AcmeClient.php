@@ -108,31 +108,31 @@ final class AcmeClient
      */
     public function get(string $resource): Response
     {
-            $url = $this->getResourceUrl($resource);
+        $url = $this->getResourceUrl($resource);
 
-            $this->logger->debug('Requesting {url} via GET', [
+        $this->logger->debug('Requesting {url} via GET', [
                 'url' => $url,
             ]);
 
-            try {
-                $response = $this->httpClient->request(new Request($url));
+        try {
+            $response = $this->httpClient->request(new Request($url));
 
-                // We just buffer the body here, so no further I/O will happen once this method's promise resolves.
-                $body = $response->getBody()->buffer();
-                $response->setBody(new ReadableBuffer($body));
+            // We just buffer the body here, so no further I/O will happen once this method's promise resolves.
+            $body = $response->getBody()->buffer();
+            $response->setBody(new ReadableBuffer($body));
 
-                $this->logger->debug('Request for {url} via GET has been processed with status {status}: {body}', [
+            $this->logger->debug('Request for {url} via GET has been processed with status {status}: {body}', [
                     'url' => $url,
                     'status' => $response->getStatus(),
                     'body' => $body,
                 ]);
 
-                $this->saveNonce($response);
-            } catch (Throwable $e) {
-                throw new AcmeException("GET request to {$url} failed: " . $e->getMessage(), null, $e);
-            }
+            $this->saveNonce($response);
+        } catch (Throwable $e) {
+            throw new AcmeException("GET request to {$url} failed: " . $e->getMessage(), null, $e);
+        }
 
-            return $response;
+        return $response;
     }
 
     /**
@@ -265,24 +265,24 @@ final class AcmeClient
      */
     private function requestNonce(): string
     {
-            $url = $this->getResourceUrl(AcmeResource::NEW_NONCE);
-            $request = new Request($url, 'HEAD');
+        $url = $this->getResourceUrl(AcmeResource::NEW_NONCE);
+        $request = new Request($url, 'HEAD');
 
-            try {
-                $response = $this->httpClient->request($request);
+        try {
+            $response = $this->httpClient->request($request);
 
-                if (!$response->hasHeader('replay-nonce')) {
-                    throw new AcmeException("HTTP response didn't carry replay-nonce header.");
-                }
-
-                return $response->getHeader('replay-nonce');
-            } catch (HttpException $e) {
-                throw new AcmeException(
-                    "HEAD request to {$url} failed, could not obtain a replay nonce: " . $e->getMessage(),
-                    null,
-                    $e
-                );
+            if (!$response->hasHeader('replay-nonce')) {
+                throw new AcmeException("HTTP response didn't carry replay-nonce header.");
             }
+
+            return $response->getHeader('replay-nonce');
+        } catch (HttpException $e) {
+            throw new AcmeException(
+                "HEAD request to {$url} failed, could not obtain a replay nonce: " . $e->getMessage(),
+                null,
+                $e
+            );
+        }
     }
 
     /**
@@ -300,9 +300,9 @@ final class AcmeClient
         }
 
         if (!$this->directory) {
-                $this->fetchDirectory();
+            $this->fetchDirectory();
 
-                return $this->getResourceUrl($resource);
+            return $this->getResourceUrl($resource);
         }
 
         if (isset($this->directory[$resource])) {

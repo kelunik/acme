@@ -3,7 +3,6 @@
 namespace Kelunik\Acme;
 
 use Amp\Http\Client\HttpClientBuilder;
-use Amp\Http\Client\Response;
 use Amp\PHPUnit\AsyncTestCase;
 
 class Http01VerificationTest extends AsyncTestCase

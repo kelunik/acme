@@ -2,13 +2,10 @@
 
 namespace Kelunik\Acme;
 
-use Amp\ByteStream\InMemoryStream;
 use Amp\ByteStream\ReadableBuffer;
 use Amp\Cancellation;
-use Amp\CancellationToken;
 use Amp\Dns\NoRecordException;
 use Amp\Dns\Resolver;
-use Amp\Failure;
 use Amp\Http\Client\ApplicationInterceptor;
 use Amp\Http\Client\Connection\DefaultConnectionFactory;
 use Amp\Http\Client\Connection\UnlimitedConnectionPool;
@@ -17,10 +14,8 @@ use Amp\Http\Client\HttpClientBuilder;
 use Amp\Http\Client\Request;
 use Amp\Http\Client\Response;
 use Amp\PHPUnit\AsyncTestCase;
-use Amp\Promise;
 use Amp\Socket\ClientTlsContext;
 use Amp\Socket\ConnectContext;
-use Amp\Success;
 use Kelunik\Acme\Crypto\RsaKeyGenerator;
 use ReflectionClass;
 use function Amp\Dns\resolver;

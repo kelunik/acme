@@ -10,7 +10,6 @@
 namespace Kelunik\Acme;
 
 use Amp\Http\Client\Response;
-use Amp\Promise;
 use InvalidArgumentException;
 use Kelunik\Acme\Protocol\Account;
 use Kelunik\Acme\Protocol\Authorization;
@@ -22,7 +21,6 @@ use Kelunik\Certificate\Certificate;
 use Psr\Http\Message\UriInterface;
 use Psr\Log\LoggerInterface as PsrLogger;
 use Psr\Log\NullLogger;
-use function Amp\call;
 use function Amp\delay;
 
 /**

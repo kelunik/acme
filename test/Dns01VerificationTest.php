@@ -6,9 +6,7 @@ use Amp\Dns\DnsException;
 use Amp\Dns\NoRecordException;
 use Amp\Dns\Record;
 use Amp\Dns\Resolver;
-use Amp\Failure;
 use Amp\PHPUnit\AsyncTestCase;
-use Amp\Success;
 
 class Dns01VerificationTest extends AsyncTestCase
 {

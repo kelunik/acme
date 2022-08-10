@@ -9,7 +9,6 @@
 
 namespace Kelunik\Acme\Csr;
 
-use Amp\Promise;
 use Kelunik\Acme\AcmeException;
 use Kelunik\Acme\Crypto\PrivateKey;
 

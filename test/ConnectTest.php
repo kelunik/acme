@@ -5,7 +5,6 @@ namespace Kelunik\Acme;
 use Amp\PHPUnit\AsyncTestCase;
 use Amp\Socket\ClientTlsContext;
 use Amp\Socket\ConnectContext;
-use Amp\Socket\EncryptableSocket;
 use function Amp\Socket\connect;
 
 class ConnectTest extends AsyncTestCase

@@ -10,9 +10,7 @@
 namespace Kelunik\Acme\Verifiers;
 
 use Amp\Dns;
-use Amp\Promise;
 use Kelunik\Acme\AcmeException;
-use function Amp\call;
 
 /**
  * Verifies DNS-01 challenges.
