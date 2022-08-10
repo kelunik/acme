@@ -210,7 +210,7 @@ final class AcmeClient
                      * Hit rate limit.
                      * @{link} https://letsencrypt.org/docs/rate-limits/
                      */
-                    delay(1000);
+                    delay(1);
                     continue;
                 }
             } catch (Throwable $e) {
