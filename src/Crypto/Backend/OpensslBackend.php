@@ -19,9 +19,6 @@ final class OpensslBackend implements Backend
     /**
      * Creates a JSON Web Key (jwk).
      *
-     * @param PrivateKey $privateKey
-     *
-     * @return array
      * @throws CryptoException
      *
      * @see https://tools.ietf.org/html/rfc7517
@@ -52,12 +49,6 @@ final class OpensslBackend implements Backend
      *
      * If accountUrl is provided, it uses the 'kid' field. Otherwise it uses the jwk.
      *
-     * @param array|null $payload
-     * @param string|null $accountUrl
-     * @param PrivateKey $privateKey
-     * @param string $nonce
-     *
-     * @return string
      * @throws CryptoException
      * @throws AcmeException
      */

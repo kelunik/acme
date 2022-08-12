@@ -57,9 +57,7 @@ final class Authorization
     /**
      * Authorization constructor.
      *
-     * @param Identifier         $identifier
      * @param string             $status The status of this account.
-     * @param \DateTimeImmutable $expires
      * @param Challenge[]        $challenges
      */
     public function __construct(

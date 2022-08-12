@@ -48,9 +48,6 @@ class AcmeService
      * Registers a new account on the server.
      *
      * @param string $email e-mail address for contact
-     * @param bool   $agreement
-     *
-     * @return Account
      *
      * @see https://datatracker.ietf.org/doc/html/rfc8555#section-7.3
      */
@@ -94,8 +91,6 @@ class AcmeService
      * @param string[]                $domainNames DNS names to request order for
      * @param \DateTimeInterface|null $notBefore The requested value of the notBefore field in the certificate
      * @param \DateTimeInterface|null $notAfter The requested value of the notAfter field in the certificate
-     *
-     * @return Order
      */
     public function newOrder(
         array $domainNames,
@@ -133,8 +128,6 @@ class AcmeService
      * Finalizes a challenge and signals that the CA should validate it.
      *
      * @param UriInterface $url URI of the challenge
-     *
-     * @return Challenge
      */
     public function finalizeChallenge(UriInterface $url): Challenge
     {
@@ -151,10 +144,6 @@ class AcmeService
 
     /**
      * Gets the authorization.
-     *
-     * @param UriInterface $url
-     *
-     * @return Authorization
      */
     public function getAuthorization(UriInterface $url): Authorization
     {
@@ -171,10 +160,6 @@ class AcmeService
 
     /**
      * Gets the challenge.
-     *
-     * @param UriInterface $url
-     *
-     * @return Challenge
      */
     public function getChallenge(UriInterface $url): Challenge
     {
@@ -193,8 +178,6 @@ class AcmeService
      * Polls until a challenge has been validated.
      *
      * @param UriInterface $url URI of the authorization
-     *
-     * @return void
      */
     public function pollForAuthorization(UriInterface $url): void
     {
@@ -222,8 +205,6 @@ class AcmeService
      * Polls until an order is ready.
      *
      * @param UriInterface $url URI of the order
-     *
-     * @return void
      */
     public function pollForOrderReady(UriInterface $url): void
     {
@@ -251,8 +232,6 @@ class AcmeService
      * Polls until an order is valid.
      *
      * @param UriInterface $url URI of the order
-     *
-     * @return void
      */
     public function pollForOrderValid(UriInterface $url): void
     {
@@ -279,10 +258,7 @@ class AcmeService
     /**
      * Requests a new certificate. This will be done with the finalize URL which is created upon order creation.
      *
-     * @param UriInterface $url
      * @param string       $csr certificate signing request
-     *
-     * @return Order
      */
     public function finalizeOrder(UriInterface $url, string $csr): Order
     {
@@ -355,8 +331,6 @@ class AcmeService
      * Revokes a certificate.
      *
      * @param string $pem PEM encoded certificate
-     *
-     * @return void
      */
     public function revokeCertificate(string $pem): void
     {
