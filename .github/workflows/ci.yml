@@ -58,14 +58,14 @@ jobs:
       - name: Lint PHP
         run: find -name "*.php" -not -path "./vendor/*" -print0 | xargs -n 1 -0 php -l
 
-      - name: Start boulder
-        run: test/.run-boulder.sh
+      - name: Start pebble
+        run: test/.run-pebble.sh
 
-      - name: Wait for boulder
+      - name: Wait for pebble
         run: while ! nc -z localhost 14000; do sleep 0.1; done; sleep 2
 
       - name: Run tests
-        run: BOULDER_HOST="https://127.0.0.1:14000" vendor/bin/phpunit ${{ matrix.phpunit-flags }}
+        run: PEBBLE_HOST="https://127.0.0.1:14000" vendor/bin/phpunit ${{ matrix.phpunit-flags }}
 
       - name: Run style fixer
         env:

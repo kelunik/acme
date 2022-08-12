@@ -46,10 +46,10 @@ class AcmeClientTest extends AsyncTestCase
     /**
      * @test
      */
-    public function boulderConfigured(): void
+    public function pebbleConfigured(): void
     {
-        if (\getenv('BOULDER_HOST') === false) {
-            $this->markTestSkipped('No Boulder host set. Set the environment variable BOULDER_HOST to enable those tests.');
+        if (\getenv('PEBBLE_HOST') === false) {
+            $this->markTestSkipped('No pebble host set. Set the environment variable PEBBLE_HOST to enable those tests.');
         }
 
         $this->assertTrue(true);
@@ -57,7 +57,7 @@ class AcmeClientTest extends AsyncTestCase
 
     /**
      * @test
-     * @depends boulderConfigured
+     * @depends pebbleConfigured
      */
     public function failsIfResourceIsNoUriAndNotInDirectory(): void
     {
@@ -65,7 +65,7 @@ class AcmeClientTest extends AsyncTestCase
         $this->expectDeprecationMessage('Resource not found in directory');
 
         $client = new AcmeClient(
-            \getenv('BOULDER_HOST') . '/dir',
+            \getenv('PEBBLE_HOST') . '/dir',
             (new RsaKeyGenerator())->generateKey(),
             (new HttpClientBuilder)->usingPool($this->httpPool)->build()
         );
@@ -74,17 +74,17 @@ class AcmeClientTest extends AsyncTestCase
 
     /**
      * @test
-     * @depends boulderConfigured
+     * @depends pebbleConfigured
      */
     public function canFetchDirectory(): void
     {
         $client = new AcmeClient(
-            \getenv('BOULDER_HOST') . '/dir',
+            \getenv('PEBBLE_HOST') . '/dir',
             (new RsaKeyGenerator())->generateKey(),
             (new HttpClientBuilder)->usingPool($this->httpPool)->build()
         );
 
-        $response = $client->get(\getenv('BOULDER_HOST') . '/dir');
+        $response = $client->get(\getenv('PEBBLE_HOST') . '/dir');
         $this->assertSame(200, $response->getStatus());
 
         $data = \json_decode($response->getBody()->buffer(), true);
@@ -101,23 +101,23 @@ class AcmeClientTest extends AsyncTestCase
 
     /**
      * @test
-     * @depends boulderConfigured
+     * @depends pebbleConfigured
      */
     public function fetchesNonceWhenNoneAvailable(): void
     {
         $client = new AcmeClient(
-            \getenv('BOULDER_HOST') . '/dir',
+            \getenv('PEBBLE_HOST') . '/dir',
             (new RsaKeyGenerator())->generateKey(),
             (new HttpClientBuilder)->usingPool($this->httpPool)->build()
         );
 
-        $client->post(\getenv('BOULDER_HOST') . '/sign-me-up', []);
+        $client->post(\getenv('PEBBLE_HOST') . '/sign-me-up', []);
         $this->addToAssertionCount(1);
     }
 
     /**
      * @test
-     * @depends boulderConfigured
+     * @depends pebbleConfigured
      */
     public function failsIfDnsFails(): void
     {
@@ -130,7 +130,7 @@ class AcmeClientTest extends AsyncTestCase
         resolver($resolver);
 
         $client = new AcmeClient(
-            \getenv('BOULDER_HOST') . '/dir',
+            \getenv('PEBBLE_HOST') . '/dir',
             (new RsaKeyGenerator())->generateKey(),
             (new HttpClientBuilder)->usingPool($this->httpPool)->build()
         );
@@ -140,7 +140,7 @@ class AcmeClientTest extends AsyncTestCase
 
     /**
      * @test
-     * @depends boulderConfigured
+     * @depends pebbleConfigured
      */
     public function failsWithInvalidDirectoryResponse(): void
     {
@@ -163,7 +163,7 @@ class AcmeClientTest extends AsyncTestCase
             ->build();
 
         $client = new AcmeClient(
-            \getenv('BOULDER_HOST') . '/dir',
+            \getenv('PEBBLE_HOST') . '/dir',
             (new RsaKeyGenerator())->generateKey(),
             $httpClient
         );
@@ -173,7 +173,7 @@ class AcmeClientTest extends AsyncTestCase
 
     /**
      * @test
-     * @depends boulderConfigured
+     * @depends pebbleConfigured
      */
     public function failsWithInvalidDirectoryResponseButCorrectErrorResponse(): void
     {
@@ -199,7 +199,7 @@ class AcmeClientTest extends AsyncTestCase
             ->build();
 
         $client = new AcmeClient(
-            \getenv('BOULDER_HOST') . '/dir',
+            \getenv('PEBBLE_HOST') . '/dir',
             (new RsaKeyGenerator())->generateKey(),
             $httpClient
         );
@@ -209,7 +209,7 @@ class AcmeClientTest extends AsyncTestCase
 
     /**
      * @test
-     * @depends boulderConfigured
+     * @depends pebbleConfigured
      */
     public function failsWithTooManyBadNonceErrors(): void
     {
@@ -238,7 +238,7 @@ class AcmeClientTest extends AsyncTestCase
             ->build();
 
         $client = new AcmeClient(
-            \getenv('BOULDER_HOST') . '/dir',
+            \getenv('PEBBLE_HOST') . '/dir',
             (new RsaKeyGenerator())->generateKey(),
             $httpClient
         );
@@ -248,7 +248,7 @@ class AcmeClientTest extends AsyncTestCase
 
     /**
      * @test
-     * @depends boulderConfigured
+     * @depends pebbleConfigured
      */
     public function succeedsWithOneBadNonceError(): void
     {
@@ -278,7 +278,7 @@ class AcmeClientTest extends AsyncTestCase
             ->build();
 
         $client = new AcmeClient(
-            \getenv('BOULDER_HOST') . '/dir',
+            \getenv('PEBBLE_HOST') . '/dir',
             (new RsaKeyGenerator())->generateKey(),
             $httpClient
         );

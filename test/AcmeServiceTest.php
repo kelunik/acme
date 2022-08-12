@@ -19,8 +19,8 @@ class AcmeServiceTest extends AsyncTestCase
     {
         parent::setUp();
 
-        if (\getenv('BOULDER_HOST') === false) {
-            $this->markTestSkipped('No Boulder host set. Set the environment variable BOULDER_HOST to enable those tests.');
+        if (\getenv('PEBBLE_HOST') === false) {
+            $this->markTestSkipped('No pebble host set. Set the environment variable PEBBLE_HOST to enable those tests.');
         }
 
         $httpPool = new UnlimitedConnectionPool(new DefaultConnectionFactory(
@@ -33,7 +33,7 @@ class AcmeServiceTest extends AsyncTestCase
             ->build();
 
         $key = (new RsaKeyGenerator)->generateKey();
-        $client = new AcmeClient(\getenv('BOULDER_HOST') . '/dir', $key, $httpClient);
+        $client = new AcmeClient(\getenv('PEBBLE_HOST') . '/dir', $key, $httpClient);
         $this->service = new AcmeService($client);
     }
 
