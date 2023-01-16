@@ -19,17 +19,17 @@ use Kelunik\Acme\AcmeException;
  */
 final class Dns01
 {
-    /** @var Dns\Resolver */
+    /** @var Dns\DnsResolver */
     private $resolver;
 
     /**
      * Dns01 constructor.
      *
-     * @param Dns\Resolver|null $resolver DNS resolver, otherwise a default resolver will be used.
+     * @param Dns\DnsResolver|null $resolver DNS resolver, otherwise a default resolver will be used.
      */
-    public function __construct(Dns\Resolver $resolver = null)
+    public function __construct(Dns\DnsResolver $resolver = null)
     {
-        $this->resolver = $resolver ?? Dns\resolver();
+        $this->resolver = $resolver ?? Dns\dnsResolver();
     }
 
     /**
@@ -49,13 +49,13 @@ final class Dns01
         $uri = '_acme-challenge.' . $domain;
 
         try {
-            $dnsRecords = $this->resolver->query($uri, Dns\Record::TXT);
-        } catch (Dns\NoRecordException $e) {
-            throw new AcmeException("Verification failed, no TXT record found for '{$uri}'.", 0, $e);
+            $dnsRecords = $this->resolver->query($uri, Dns\DnsRecord::TXT);
+        } catch (Dns\MissingDnsRecordException $e) {
+            throw new AcmeException("Verification failed, no TXT record found for '{$uri}'.", "0", $e);
         } catch (Dns\DnsException $e) {
             throw new AcmeException(
                 "Verification failed, couldn't query TXT record of '{$uri}': " . $e->getMessage(),
-                0,
+                "0",
                 $e
             );
         }

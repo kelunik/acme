@@ -4,8 +4,8 @@ namespace Kelunik\Acme;
 
 use Amp\ByteStream\ReadableBuffer;
 use Amp\Cancellation;
-use Amp\Dns\NoRecordException;
-use Amp\Dns\Resolver;
+use Amp\Dns\DnsResolver;
+use Amp\Dns\MissingDnsRecordException;
 use Amp\Http\Client\ApplicationInterceptor;
 use Amp\Http\Client\Connection\DefaultConnectionFactory;
 use Amp\Http\Client\Connection\UnlimitedConnectionPool;
@@ -19,7 +19,7 @@ use Amp\Socket\ConnectContext;
 use Kelunik\Acme\Crypto\RsaKeyGenerator;
 use ReflectionClass;
 use function Amp\Dns\createDefaultResolver;
-use function Amp\Dns\resolver;
+use function Amp\Dns\dnsResolver;
 
 class AcmeClientTest extends AsyncTestCase
 {
@@ -40,7 +40,7 @@ class AcmeClientTest extends AsyncTestCase
     {
         parent::tearDown();
 
-        resolver(createDefaultResolver());
+        dnsResolver(createDefaultResolver());
     }
 
     /**
@@ -124,10 +124,10 @@ class AcmeClientTest extends AsyncTestCase
         $this->expectException(AcmeException::class);
         $this->expectExceptionMessageMatches('~GET request to .* failed~');
 
-        $resolver = $this->getMockBuilder(Resolver::class)->getMock();
-        $resolver->method('resolve')->willThrowException(new NoRecordException);
+        $resolver = $this->getMockBuilder(DnsResolver::class)->getMock();
+        $resolver->method('resolve')->willThrowException(new MissingDnsRecordException());
 
-        resolver($resolver);
+        dnsResolver($resolver);
 
         $client = new AcmeClient(
             \getenv('PEBBLE_HOST') . '/dir',
