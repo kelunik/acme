@@ -51,11 +51,11 @@ final class Dns01
         try {
             $dnsRecords = $this->resolver->query($uri, Dns\DnsRecord::TXT);
         } catch (Dns\MissingDnsRecordException $e) {
-            throw new AcmeException("Verification failed, no TXT record found for '{$uri}'.", "0", $e);
+            throw new AcmeException("Verification failed, no TXT record found for '{$uri}'.", (string) ($e->getCode() ?? 404), $e);
         } catch (Dns\DnsException $e) {
             throw new AcmeException(
                 "Verification failed, couldn't query TXT record of '{$uri}': " . $e->getMessage(),
-                "0",
+                (string) ($e->getCode() ?? 500),
                 $e
             );
         }
