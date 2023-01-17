@@ -3,9 +3,9 @@
 namespace Kelunik\Acme;
 
 use Amp\Dns\DnsException;
-use Amp\Dns\NoRecordException;
-use Amp\Dns\Record;
-use Amp\Dns\Resolver;
+use Amp\Dns\DnsRecord;
+use Amp\Dns\DnsResolver;
+use Amp\Dns\MissingDnsRecordException;
 use Amp\PHPUnit\AsyncTestCase;
 
 class Dns01VerificationTest extends AsyncTestCase
@@ -21,7 +21,7 @@ class Dns01VerificationTest extends AsyncTestCase
     {
         parent::setUp();
 
-        $this->resolver = $this->getMockBuilder(Resolver::class)->getMock();
+        $this->resolver = $this->getMockBuilder(DnsResolver::class)->getMock();
         $this->verifier = new Verifiers\Dns01($this->resolver);
     }
 
@@ -33,7 +33,7 @@ class Dns01VerificationTest extends AsyncTestCase
         $this->expectException(AcmeException::class);
         $this->expectExceptionMessage('Verification failed, no TXT record found for \'_acme-challenge.example.com\'.');
 
-        $this->resolver->method("query")->willThrowException(new NoRecordException);
+        $this->resolver->method("query")->willThrowException(new MissingDnsRecordException());
         $this->verifier->verifyChallenge("example.com", "foobar");
     }
 
@@ -57,7 +57,7 @@ class Dns01VerificationTest extends AsyncTestCase
         $this->expectException(AcmeException::class);
         $this->expectExceptionMessage("Verification failed, please check DNS record for '_acme-challenge.example.com'.");
 
-        $this->resolver->method("query")->willReturn([new Record("xyz", Record::TXT, 300)]);
+        $this->resolver->method("query")->willReturn([new DnsRecord("xyz", DnsRecord::TXT, 300)]);
         $this->verifier->verifyChallenge("example.com", "foobar");
     }
 
@@ -68,7 +68,7 @@ class Dns01VerificationTest extends AsyncTestCase
     {
         $this->expectNotToPerformAssertions();
 
-        $this->resolver->method("query")->willReturn([new Record("foobar", Record::TXT, 300)]);
+        $this->resolver->method("query")->willReturn([new DnsRecord("foobar", DnsRecord::TXT, 300)]);
         $this->verifier->verifyChallenge("example.com", "foobar");
     }
 
