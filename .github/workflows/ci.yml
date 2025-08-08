@@ -11,6 +11,7 @@ jobs:
         include:
           - operating-system: 'ubuntu-latest'
             php-version: '8.1'
+            static-analysis: none
 
           - operating-system: 'ubuntu-latest'
             php-version: '8.2'
@@ -54,6 +55,10 @@ jobs:
             composer-${{ runner.os }}-
             composer-
 
+      - name: Remove psalm on unsupported versions
+        run: composer remove psalm/phar --no-update
+        if: matrix.static-analysis == 'none'
+
       - name: Install dependencies
         uses: nick-invision/retry@v2
         with:
@@ -84,3 +89,4 @@ jobs:
 
       - name: Run psalm
         run: vendor/bin/psalm.phar
+        if: matrix.static-analysis != 'none'
