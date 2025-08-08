@@ -25,7 +25,7 @@ use Kelunik\Acme\AcmeException;
  */
 final class Http01
 {
-    private $httpClient;
+    private HttpClient $httpClient;
 
     /**
      * Http01 constructor.

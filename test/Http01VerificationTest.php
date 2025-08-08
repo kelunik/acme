@@ -27,7 +27,7 @@ class Http01VerificationTest extends AsyncTestCase
         self::markTestSkipped('Currently skipped as configuration is not in place for it.');
 
         $payloadResponse = HttpClientBuilder::buildDefault()->request('http://blog.kelunik.com/robots.txt');
-        $payload = \trim($payloadResponse->getBody());
+        $payload = \trim($payloadResponse->getBody()->buffer());
 
         $this->verifier->verifyChallenge('kelunik.com', 'invalid-common-name', $payload);
     }

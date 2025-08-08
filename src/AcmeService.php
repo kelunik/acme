@@ -76,10 +76,10 @@ class AcmeService
     {
         $this->logger->info('Retrieving order ' . $url);
 
-        $response = $this->client->post($url, null);
+        $response = $this->client->post((string) $url, null);
 
         if ($response->getStatus() === 200) {
-            return Order::fromResponse($url, $response->getBody()->buffer());
+            return Order::fromResponse((string) $url, $response->getBody()->buffer());
         }
 
         throw $this->generateException($response, $response->getBody()->buffer());
@@ -133,7 +133,7 @@ class AcmeService
     {
         $this->logger->info('Finalizing challenge ' . $url);
 
-        $response = $this->client->post($url, []);
+        $response = $this->client->post((string) $url, []);
 
         try {
             return Challenge::fromResponse($response->getBody()->buffer());
@@ -149,10 +149,10 @@ class AcmeService
     {
         $this->logger->info('Retrieving authorization ' . $url);
 
-        $response = $this->client->post($url, null);
+        $response = $this->client->post((string) $url, null);
 
         try {
-            return Authorization::fromResponse($url, $response->getBody()->buffer());
+            return Authorization::fromResponse((string) $url, $response->getBody()->buffer());
         } catch (\Throwable $_) {
             throw $this->generateException($response, $response->getBody()->buffer());
         }
@@ -165,7 +165,7 @@ class AcmeService
     {
         $this->logger->info('Retrieving challenge ' . $url);
 
-        $response = $this->client->post($url, null);
+        $response = $this->client->post((string) $url, null);
 
         try {
             return Challenge::fromResponse($response->getBody()->buffer());
@@ -282,7 +282,7 @@ class AcmeService
         $csr = \substr($csr, 0, $endPos);
 
         /** @var Response $response */
-        $response = $this->client->post($url, [
+        $response = $this->client->post((string) $url, [
             'csr' => base64UrlEncode(\base64_decode($csr)),
         ]);
 
@@ -304,7 +304,7 @@ class AcmeService
     {
         $this->logger->info('Downloading certificate ' . $url);
 
-        $response = $this->client->post($url, null);
+        $response = $this->client->post((string) $url, null);
 
         if ($response->getStatus() === 200) {
             $certificateChain = $response->getBody()->buffer();
@@ -388,6 +388,6 @@ class AcmeService
             return new AcmeException("Invalid response: {$info->detail}.\nRequest URI: {$uri}.", $info->type);
         }
 
-        return new AcmeException("Invalid response: {$body}.\nRequest URI: {$uri}.", $status);
+        return new AcmeException("Invalid response: {$body}.\nRequest URI: {$uri}.", (string) $status);
     }
 }

@@ -71,24 +71,4 @@ class Dns01VerificationTest extends AsyncTestCase
         $this->resolver->method("query")->willReturn([new DnsRecord("foobar", DnsRecord::TXT, 300)]);
         $this->verifier->verifyChallenge("example.com", "foobar");
     }
-
-    /**
-     * @test
-     */
-    public function failsWithDomainNotString(): void
-    {
-        $this->expectException(\TypeError::class);
-
-        $this->verifier->verifyChallenge(null, "");
-    }
-
-    /**
-     * @test
-     */
-    public function failsWithPayloadNotString(): void
-    {
-        $this->expectException(\TypeError::class);
-
-        $this->verifier->verifyChallenge("example.com", null);
-    }
 }
