@@ -5,6 +5,6 @@ $config->getFinder()
     ->in(__DIR__ . '/src')
     ->in(__DIR__ . '/test');
 
-$config->setCacheFile(__DIR__ . '/.php_cs.cache');
+$config->setCacheFile(__DIR__ . '/.php-cs-fixer.cache');
 
 return $config;
