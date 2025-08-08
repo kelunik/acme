@@ -7,15 +7,13 @@ use Amp\Dns\DnsRecord;
 use Amp\Dns\DnsResolver;
 use Amp\Dns\MissingDnsRecordException;
 use Amp\PHPUnit\AsyncTestCase;
+use PHPUnit\Framework\MockObject\MockObject;
 
-class Dns01VerificationTest extends AsyncTestCase
+final class Dns01VerificationTest extends AsyncTestCase
 {
-    private $resolver;
-
-    /**
-     * @var Verifiers\Dns01
-     */
-    private $verifier;
+    /** @var DnsResolver&MockObject */
+    private DnsResolver $resolver;
+    private Verifiers\Dns01 $verifier;
 
     #[\Override]
     public function setUp(): void

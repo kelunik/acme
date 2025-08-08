@@ -6,10 +6,9 @@ use Kelunik\Acme\Crypto\KeyGenerator;
 use Kelunik\Acme\Crypto\RsaKeyGenerator;
 use PHPUnit\Framework\TestCase;
 
-class RsaKeyGeneratorTest extends TestCase
+final class RsaKeyGeneratorTest extends TestCase
 {
-    /** @var KeyGenerator */
-    private $generator;
+    private KeyGenerator $generator;
 
     #[\Override]
     public function setUp(): void

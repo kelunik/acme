@@ -29,7 +29,7 @@ use function Amp\delay;
  * @author Niklas Keller <me@kelunik.com>
  * @package Kelunik\Acme
  */
-class AcmeService
+final class AcmeService
 {
     /**
      * @var AcmeClient low level ACME client
@@ -74,7 +74,7 @@ class AcmeService
      */
     public function getOrder(UriInterface $url): Order
     {
-        $this->logger->info('Retrieving order ' . $url);
+        $this->logger->info('Retrieving order ' . (string) $url);
 
         $response = $this->client->post((string) $url, null);
 
@@ -131,7 +131,7 @@ class AcmeService
      */
     public function finalizeChallenge(UriInterface $url): Challenge
     {
-        $this->logger->info('Finalizing challenge ' . $url);
+        $this->logger->info('Finalizing challenge ' . (string) $url);
 
         $response = $this->client->post((string) $url, []);
 
@@ -147,7 +147,7 @@ class AcmeService
      */
     public function getAuthorization(UriInterface $url): Authorization
     {
-        $this->logger->info('Retrieving authorization ' . $url);
+        $this->logger->info('Retrieving authorization ' . (string) $url);
 
         $response = $this->client->post((string) $url, null);
 
@@ -163,7 +163,7 @@ class AcmeService
      */
     public function getChallenge(UriInterface $url): Challenge
     {
-        $this->logger->info('Retrieving challenge ' . $url);
+        $this->logger->info('Retrieving challenge ' . (string) $url);
 
         $response = $this->client->post((string) $url, null);
 
@@ -181,12 +181,12 @@ class AcmeService
      */
     public function pollForAuthorization(UriInterface $url): void
     {
-        $this->logger->info('Polling for authorization ' . $url);
+        $this->logger->info('Polling for authorization ' . (string) $url);
 
         do {
             $authorization = $this->getAuthorization($url);
 
-            $this->logger->info('Retrieved authorization ' . $url . ': ' . $authorization->getStatus());
+            $this->logger->info('Retrieved authorization ' . (string) $url . ': ' . $authorization->getStatus());
 
             if ($authorization->getStatus() === ChallengeStatus::INVALID) {
                 // TODO Use Challenge->getError
@@ -208,12 +208,12 @@ class AcmeService
      */
     public function pollForOrderReady(UriInterface $url): void
     {
-        $this->logger->info('Polling for order to be ready ' . $url);
+        $this->logger->info('Polling for order to be ready ' . (string) $url);
 
         do {
             $order = $this->getOrder($url);
 
-            $this->logger->info('Retrieved order ' . $url . ': ' . $order->getStatus());
+            $this->logger->info('Retrieved order ' . (string) $url . ': ' . $order->getStatus());
 
             if ($order->getStatus() === OrderStatus::INVALID) {
                 // TODO Use Challenge->getError
@@ -235,12 +235,12 @@ class AcmeService
      */
     public function pollForOrderValid(UriInterface $url): void
     {
-        $this->logger->info('Polling for order to be valid ' . $url);
+        $this->logger->info('Polling for order to be valid ' . (string) $url);
 
         do {
             $order = $this->getOrder($url);
 
-            $this->logger->info('Retrieved order ' . $url . ': ' . $order->getStatus());
+            $this->logger->info('Retrieved order ' . (string) $url . ': ' . $order->getStatus());
 
             if ($order->getStatus() === OrderStatus::INVALID) {
                 // TODO Use Challenge->getError
@@ -262,7 +262,7 @@ class AcmeService
      */
     public function finalizeOrder(UriInterface $url, string $csr): Order
     {
-        $this->logger->info('Finalizing order ' . $url);
+        $this->logger->info('Finalizing order ' . (string) $url);
 
         $begin = 'REQUEST-----';
         $end = '----END';
@@ -281,7 +281,6 @@ class AcmeService
 
         $csr = \substr($csr, 0, $endPos);
 
-        /** @var Response $response */
         $response = $this->client->post((string) $url, [
             'csr' => base64UrlEncode(\base64_decode($csr)),
         ]);
@@ -302,7 +301,7 @@ class AcmeService
      */
     public function downloadCertificates(UriInterface $url): array
     {
-        $this->logger->info('Downloading certificate ' . $url);
+        $this->logger->info('Downloading certificate ' . (string) $url);
 
         $response = $this->client->post((string) $url, null);
 
@@ -345,29 +344,6 @@ class AcmeService
         }
 
         throw $this->generateException($response, $response->getBody()->buffer());
-    }
-
-    /**
-     * Parses a retry header into seconds to wait until a request should be retried.
-     *
-     * @param string $header header value
-     *
-     * @return int seconds to wait until retry
-     * @throws AcmeException If the header value cannot be parsed.
-     */
-    private function parseRetryAfter(string $header): int
-    {
-        if (\preg_match('#^\d+$#', $header)) {
-            return (int) $header;
-        }
-
-        $time = @\strtotime($header);
-
-        if ($time === false) {
-            throw new AcmeException("Invalid retry-after header: '{$header}'");
-        }
-
-        return \max($time - \time(), 0);
     }
 
     /**

@@ -23,7 +23,7 @@ use function Amp\Dns\normalizeName;
  */
 final class OpensslCsrGenerator implements CsrGenerator
 {
-    private $mustStaple;
+    private bool $mustStaple;
 
     /**
      * OpenSSLCSRGenerator constructor.
@@ -70,6 +70,10 @@ final class OpensslCsrGenerator implements CsrGenerator
         $mustStaple = $this->mustStaple ? 'tlsfeature = status_request' : '';
 
         $tempFile = \tempnam(\sys_get_temp_dir(), 'acme-openssl-config-');
+        if ($tempFile === false) {
+            throw new AcmeException('Failed to create temp file for OpenSSL config');
+        }
+
         $tempConf = <<<EOL
 [ req ]
 distinguished_name = req_distinguished_name

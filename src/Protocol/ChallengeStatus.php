@@ -22,6 +22,9 @@ final class ChallengeStatus
         return [self::PENDING, self::PROCESSING, self::VALID, self::INVALID];
     }
 
+    /**
+     * @psalm-suppress UnusedConstructor
+     */
     private function __construct()
     {
         // disabled

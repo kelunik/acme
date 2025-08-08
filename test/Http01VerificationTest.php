@@ -3,9 +3,10 @@
 namespace Kelunik\Acme;
 
 use Amp\Http\Client\HttpClientBuilder;
+use Amp\Http\Client\Request;
 use Amp\PHPUnit\AsyncTestCase;
 
-class Http01VerificationTest extends AsyncTestCase
+final class Http01VerificationTest extends AsyncTestCase
 {
     /**
      * @var Verifiers\Http01
@@ -27,7 +28,7 @@ class Http01VerificationTest extends AsyncTestCase
     {
         self::markTestSkipped('Currently skipped as configuration is not in place for it.');
 
-        $payloadResponse = HttpClientBuilder::buildDefault()->request('http://blog.kelunik.com/robots.txt');
+        $payloadResponse = HttpClientBuilder::buildDefault()->request(new Request('http://blog.kelunik.com/robots.txt'));
         $payload = \trim($payloadResponse->getBody()->buffer());
 
         $this->verifier->verifyChallenge('kelunik.com', 'invalid-common-name', $payload);

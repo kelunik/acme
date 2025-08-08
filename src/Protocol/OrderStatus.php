@@ -23,6 +23,9 @@ final class OrderStatus
         return [self::INVALID, self::PENDING, self::READY, self::PROCESSING, self::VALID];
     }
 
+    /**
+     * @psalm-suppress UnusedConstructor
+     */
     private function __construct()
     {
         // disabled

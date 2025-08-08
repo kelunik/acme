@@ -7,7 +7,7 @@ use Kelunik\Acme\Crypto\PrivateKey;
 use Kelunik\Acme\Crypto\RsaKeyGenerator;
 use PHPUnit\Framework\TestCase;
 
-class KeyAuthorizationTest extends TestCase
+final class KeyAuthorizationTest extends TestCase
 {
     /**
      * @test

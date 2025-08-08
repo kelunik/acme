@@ -9,13 +9,10 @@ use Kelunik\Acme\Crypto\RsaKeyGenerator;
 use Kelunik\Acme\Csr\CsrGenerator;
 use Kelunik\Acme\Csr\OpensslCsrGenerator;
 
-class OpensslCsrGeneratorTest extends AsyncTestCase
+final class OpensslCsrGeneratorTest extends AsyncTestCase
 {
-    /** @var KeyGenerator */
-    private $keyGenerator;
-
-    /** @var CsrGenerator */
-    private $csrGenerator;
+    private KeyGenerator $keyGenerator;
+    private CsrGenerator $csrGenerator;
 
     #[\Override]
     public function setUp(): void
@@ -72,6 +69,6 @@ class OpensslCsrGeneratorTest extends AsyncTestCase
     public function succeedsOtherwise(): void
     {
         $csr = $this->csrGenerator->generateCsr($this->keyGenerator->generateKey(), ['example.com']);
-        $this->assertIsString($csr);
+        $this->assertNotEmpty($csr);
     }
 }

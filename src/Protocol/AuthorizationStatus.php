@@ -24,6 +24,9 @@ final class AuthorizationStatus
         return [self::PENDING, self::VALID, self::INVALID, self::DEACTIVATED, self::EXPIRED, self::REVOKED];
     }
 
+    /**
+     * @psalm-suppress UnusedConstructor
+     */
     private function __construct()
     {
         // disabled

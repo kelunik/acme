@@ -275,6 +275,7 @@ final class AcmeClient
                 throw new AcmeException("HTTP response didn't carry replay-nonce header.");
             }
 
+            /** @var string */
             return $response->getHeader('replay-nonce');
         } catch (HttpException $e) {
             throw new AcmeException(
@@ -365,6 +366,7 @@ final class AcmeClient
             return;
         }
 
+        /** @psalm-suppress InvalidPropertyAssignmentValue */
         $this->nonces[] = $response->getHeader('replay-nonce');
     }
 }

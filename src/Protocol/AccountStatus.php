@@ -21,6 +21,9 @@ final class AccountStatus
         return [self::VALID, self::DEACTIVATED, self::REVOKED];
     }
 
+    /**
+     * @psalm-suppress UnusedConstructor
+     */
     private function __construct()
     {
         // disabled

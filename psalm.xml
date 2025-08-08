@@ -1,0 +1,76 @@
+<?xml version="1.0"?>
+<psalm
+        errorLevel="2"
+        phpVersion="8.1"
+        resolveFromConfigFile="true"
+        rememberPropertyAssignmentsAfterCall="false"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns="https://getpsalm.org/schema/config"
+        xsi:schemaLocation="https://getpsalm.org/schema/config vendor/vimeo/psalm/config.xsd"
+>
+    <projectFiles>
+        <directory name="src"/>
+        <directory name="test"/>
+        <ignoreFiles>
+            <directory name="vendor"/>
+        </ignoreFiles>
+    </projectFiles>
+
+    <issueHandlers>
+        <MissingClosureParamType>
+            <errorLevel type="suppress">
+                <directory name="src"/>
+            </errorLevel>
+        </MissingClosureParamType>
+
+        <DeprecatedMethod>
+            <errorLevel type="suppress">
+                <directory name="src" />
+                <directory name="test" />
+            </errorLevel>
+        </DeprecatedMethod>
+
+        <MissingClosureReturnType>
+            <errorLevel type="suppress">
+                <directory name="src" />
+            </errorLevel>
+        </MissingClosureReturnType>
+
+        <UnusedClass>
+            <errorLevel type="suppress">
+                <directory name="src" />
+                <directory name="test" />
+            </errorLevel>
+        </UnusedClass>
+
+        <PossiblyUnusedMethod>
+            <errorLevel type="suppress">
+                <directory name="src" />
+            </errorLevel>
+        </PossiblyUnusedMethod>
+
+        <PropertyNotSetInConstructor>
+            <errorLevel type="suppress">
+                <directory name="test" />
+            </errorLevel>
+        </PropertyNotSetInConstructor>
+
+        <PossiblyFalseArgument>
+            <errorLevel type="suppress">
+                <directory name="test" />
+            </errorLevel>
+        </PossiblyFalseArgument>
+
+        <PossiblyNullArgument>
+            <errorLevel type="suppress">
+                <directory name="test" />
+            </errorLevel>
+        </PossiblyNullArgument>
+
+        <PossiblyFalseOperand>
+            <errorLevel type="suppress">
+                <directory name="test" />
+            </errorLevel>
+        </PossiblyFalseOperand>
+    </issueHandlers>
+</psalm>

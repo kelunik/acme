@@ -20,6 +20,6 @@ interface Backend
         string $url,
         string $nonce,
         ?array $payload,
-        string $accountUrl
+        ?string $accountUrl
     ): string;
 }

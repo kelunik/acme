@@ -10,7 +10,7 @@ use League\Uri\Http;
 use PHPUnit\Framework\TestCase;
 use function Kelunik\Acme\Protocol\identifier;
 
-class AcmeResponseTest extends TestCase
+final class AcmeResponseTest extends TestCase
 {
     /**
      * @test
@@ -98,7 +98,7 @@ class AcmeResponseTest extends TestCase
         $this->expectException(AcmeException::class);
         $this->expectExceptionMessage('Invalid response');
 
-        Authorization::fromResponse(Http::createFromString('http://example.com/'), '{
+        Authorization::fromResponse((string) Http::createFromString('http://example.com/'), '{
      "status": "valid",
      "expires": "2018-09-09T14:09:01.13Z",
 

@@ -9,6 +9,7 @@
 
 namespace Kelunik\Acme\Crypto;
 
+use Kelunik\Acme\AcmeException;
 use Phar;
 
 /**
@@ -17,9 +18,9 @@ use Phar;
  * @author Niklas Keller <me@kelunik.com>
  * @package Kelunik\Acme
  */
-class RsaKeyGenerator implements KeyGenerator
+final class RsaKeyGenerator implements KeyGenerator
 {
-    private $bits;
+    private int $bits;
 
     /**
      * RsaKeyGenerator constructor.
@@ -43,8 +44,15 @@ class RsaKeyGenerator implements KeyGenerator
 
         if (\class_exists('Phar') && !empty(Phar::running())) {
             $configContent = \file_get_contents($configFile);
+            if ($configContent === false) {
+                throw new AcmeException('Unable to read OpenSSL configuration file');
+            }
 
             $configFile = \tempnam(\sys_get_temp_dir(), 'acme_openssl_');
+            if ($configFile === false) {
+                throw new AcmeException('Failed to create temp file for OpenSSL config');
+            }
+
             \file_put_contents($configFile, $configContent);
 
             \register_shutdown_function(static function () use ($configFile) {
@@ -58,6 +66,10 @@ class RsaKeyGenerator implements KeyGenerator
             'config' => $configFile,
         ]);
 
+        if ($res === false) {
+            throw new AcmeException('Failed to generate private key');
+        }
+
         $success = \openssl_pkey_export($res, $privateKey, null, [
             'config' => $configFile,
         ]);
@@ -66,11 +78,7 @@ class RsaKeyGenerator implements KeyGenerator
             @\unlink($configFile);
         }
 
-        if (\PHP_VERSION_ID < 80000) {
-            \openssl_pkey_free($res);
-        } else {
-            unset($res);
-        }
+        unset($res);
 
         if (!$success) {
             throw new CryptoException('Key export failed!');

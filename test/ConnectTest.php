@@ -7,7 +7,7 @@ use Amp\Socket\ClientTlsContext;
 use Amp\Socket\ConnectContext;
 use function Amp\Socket\connect;
 
-class ConnectTest extends AsyncTestCase
+final class ConnectTest extends AsyncTestCase
 {
     /**
      * Test that TLS connections to the ACME server succeed.
@@ -15,7 +15,7 @@ class ConnectTest extends AsyncTestCase
      *
      * @dataProvider provideCryptoConnectArgs
      */
-    public function testCryptoConnect($uri): void
+    public function testCryptoConnect(string $uri): void
     {
         $this->expectNotToPerformAssertions();
 

@@ -9,9 +9,8 @@ use Amp\PHPUnit\AsyncTestCase;
 use Amp\Socket\ClientTlsContext;
 use Amp\Socket\ConnectContext;
 use Kelunik\Acme\Crypto\RsaKeyGenerator;
-use Kelunik\Acme\Protocol\Account;
 
-class AcmeServiceTest extends AsyncTestCase
+final class AcmeServiceTest extends AsyncTestCase
 {
     private AcmeService $service;
 
@@ -54,15 +53,13 @@ class AcmeServiceTest extends AsyncTestCase
      */
     public function registerAndReRegisterGivesSameLocation(): void
     {
-        /** @var Account $account */
         $account = $this->service->register('me@example.com', true);
         $this->assertSame('mailto:me@example.com', (string) $account->getContacts()[0]);
-        $this->assertNotNull($l1 = (string) $account->getUrl());
+        $this->assertNotEmpty($l1 = (string) $account->getUrl());
 
-        /** @var Account $account */
         $account = $this->service->register('me@example.com', true);
         $this->assertSame('mailto:me@example.com', (string) $account->getContacts()[0]);
-        $this->assertNotNull($l2 = (string) $account->getUrl());
+        $this->assertNotEmpty($l2 = (string) $account->getUrl());
 
         $this->assertSame($l1, $l2);
     }

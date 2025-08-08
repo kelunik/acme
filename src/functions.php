@@ -33,7 +33,7 @@ function generateKeyAuthorization(PrivateKey $accountKey, string $token, Backend
     $jwk = $cryptoBackend->toJwk($accountKey);
     \ksort($jwk);
 
-    return $token . '.' . base64UrlEncode(\hash('sha256', \json_encode($jwk), true));
+    return $token . '.' . base64UrlEncode(\hash('sha256', \json_encode($jwk, \JSON_THROW_ON_ERROR), true));
 }
 
 /**

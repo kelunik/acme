@@ -21,7 +21,7 @@ use ReflectionClass;
 use function Amp\Dns\createDefaultResolver;
 use function Amp\Dns\dnsResolver;
 
-class AcmeClientTest extends AsyncTestCase
+final class AcmeClientTest extends AsyncTestCase
 {
     /** @var UnlimitedConnectionPool */
     private $httpPool;
@@ -64,7 +64,7 @@ class AcmeClientTest extends AsyncTestCase
     public function failsIfResourceIsNoUriAndNotInDirectory(): void
     {
         $this->expectException(AcmeException::class);
-        $this->expectDeprecationMessage('Resource not found in directory');
+        $this->expectExceptionMessage('Resource not found in directory');
 
         $client = new AcmeClient(
             \getenv('PEBBLE_HOST') . '/dir',
@@ -114,7 +114,7 @@ class AcmeClientTest extends AsyncTestCase
         );
 
         $client->post(\getenv('PEBBLE_HOST') . '/sign-me-up', []);
-        $this->addToAssertionCount(1);
+        $this->expectNotToPerformAssertions();
     }
 
     /**
@@ -258,7 +258,7 @@ class AcmeClientTest extends AsyncTestCase
     public function succeedsWithOneBadNonceError(): void
     {
         $interceptor = new class implements ApplicationInterceptor {
-            public $encounteredBadNonceError = false;
+            public bool $encounteredBadNonceError = false;
 
             #[\Override]
             public function request(

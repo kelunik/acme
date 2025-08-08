@@ -29,6 +29,8 @@ class AcmeException extends Exception
     public function __construct(string $message, ?string $code = null, ?\Throwable $previous = null)
     {
         parent::__construct($message, 0, $previous);
+
+        /** @psalm-suppress InvalidPropertyAssignmentValue */
         $this->code = $code;
     }
 }

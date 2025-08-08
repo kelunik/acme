@@ -33,6 +33,9 @@ final class OpensslBackend implements Backend
         }
 
         $details = \openssl_pkey_get_details($key);
+        if ($details === false) {
+            throw new CryptoException("Couldn't read private key details.");
+        }
 
         if ($details['type'] !== \OPENSSL_KEYTYPE_RSA) {
             throw new CryptoException('Unsupported key type, currently only RSA is supported.');
@@ -67,20 +70,20 @@ final class OpensslBackend implements Backend
             'nonce' => $nonce,
         ];
 
-        if ($accountUrl) {
+        if ($accountUrl !== null) {
             $jws['kid'] = $accountUrl;
         } else {
             $jws['jwk'] = $this->toJwk($privateKey);
         }
 
-        $protected = base64UrlEncode(\json_encode($jws));
+        $protected = base64UrlEncode(\json_encode($jws, \JSON_THROW_ON_ERROR));
 
         if ($payload === null) {
             $payloadString = '';
         } elseif ($payload === []) {
             $payloadString = base64UrlEncode('{}');
         } else {
-            $payloadString = base64UrlEncode(\json_encode($payload));
+            $payloadString = base64UrlEncode(\json_encode($payload, \JSON_THROW_ON_ERROR));
         }
 
         \openssl_sign("$protected.$payloadString", $signed, $privateKey->toPem(), "SHA256");

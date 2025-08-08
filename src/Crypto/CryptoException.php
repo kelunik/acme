@@ -11,7 +11,7 @@ namespace Kelunik\Acme\Crypto;
 
 use Kelunik\Acme\AcmeException;
 
-class CryptoException extends AcmeException
+final class CryptoException extends AcmeException
 {
     public function __construct(string $message)
     {
