@@ -82,10 +82,3 @@ function formatDate(\DateTimeInterface $date): string
 {
     return $date->format('Y-m-d\TH:i:s.uP');
 }
-
-function parseUrl(?string $url): UriInterface
-{
-    Assert::that($url)->url();
-
-    return Http::createFromString($url);
-}
