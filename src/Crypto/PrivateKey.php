@@ -3,7 +3,7 @@
 /**
  * This file is part of the ACME package.
  *
- * @copyright Copyright (c) 2015-2017, Niklas Keller
+ * @copyright Copyright (c) 2015-2025, Niklas Keller
  * @license MIT
  */
 
