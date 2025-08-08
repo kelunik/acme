@@ -41,9 +41,13 @@ function optional(\Closure $closure): \Closure
     };
 }
 
-function multiple(\Closure $closure): \Closure
+function multiple(\Closure $closure, bool $optional = false): \Closure
 {
-    return static function ($value) use ($closure) {
+    return static function ($value) use ($closure, $optional) {
+        if ($optional && $value === null) {
+            $value = [];
+        }
+
         Assert::that($value)->isArray();
 
         foreach ($value as $k => $v) {
