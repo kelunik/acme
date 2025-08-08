@@ -26,6 +26,7 @@ class AcmeClientTest extends AsyncTestCase
     /** @var UnlimitedConnectionPool */
     private $httpPool;
 
+    #[\Override]
     public function setUp(): void
     {
         parent::setUp();
@@ -36,6 +37,7 @@ class AcmeClientTest extends AsyncTestCase
         ));
     }
 
+    #[\Override]
     protected function tearDown(): void
     {
         parent::tearDown();
@@ -148,6 +150,7 @@ class AcmeClientTest extends AsyncTestCase
         $this->expectExceptionMessage('Invalid directory response. HTTP response code: 400');
 
         $interceptor = new class implements ApplicationInterceptor {
+            #[\Override]
             public function request(
                 Request $request,
                 Cancellation $cancellation,
@@ -181,6 +184,7 @@ class AcmeClientTest extends AsyncTestCase
         $this->expectExceptionMessage('Could not obtain directory: Invalid directory response: Foobar');
 
         $interceptor = new class implements ApplicationInterceptor {
+            #[\Override]
             public function request(
                 Request $request,
                 Cancellation $cancellation,
@@ -217,6 +221,7 @@ class AcmeClientTest extends AsyncTestCase
         $this->expectExceptionMessage('too many errors (last code: 400)');
 
         $interceptor = new class implements ApplicationInterceptor {
+            #[\Override]
             public function request(
                 Request $request,
                 Cancellation $cancellation,
@@ -255,6 +260,7 @@ class AcmeClientTest extends AsyncTestCase
         $interceptor = new class implements ApplicationInterceptor {
             public $encounteredBadNonceError = false;
 
+            #[\Override]
             public function request(
                 Request $request,
                 Cancellation $cancellation,

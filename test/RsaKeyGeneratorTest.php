@@ -11,6 +11,7 @@ class RsaKeyGeneratorTest extends TestCase
     /** @var KeyGenerator */
     private $generator;
 
+    #[\Override]
     public function setUp(): void
     {
         $this->generator = new RsaKeyGenerator;

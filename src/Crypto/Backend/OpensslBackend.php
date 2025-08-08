@@ -23,6 +23,7 @@ final class OpensslBackend implements Backend
      *
      * @see https://tools.ietf.org/html/rfc7517
      */
+    #[\Override]
     public function toJwk(PrivateKey $privateKey): array
     {
         $key = \openssl_pkey_get_private($privateKey->toPem());
@@ -52,6 +53,7 @@ final class OpensslBackend implements Backend
      * @throws CryptoException
      * @throws AcmeException
      */
+    #[\Override]
     public function signJwt(
         PrivateKey $privateKey,
         string $url,

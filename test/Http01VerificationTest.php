@@ -12,6 +12,7 @@ class Http01VerificationTest extends AsyncTestCase
      */
     private $verifier;
 
+    #[\Override]
     public function setUp(): void
     {
         parent::setUp();

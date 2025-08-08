@@ -36,6 +36,7 @@ class RsaKeyGenerator implements KeyGenerator
     }
 
     /** @inheritdoc */
+    #[\Override]
     public function generateKey(): PrivateKey
     {
         $configFile = $defaultConfigFile = __DIR__ . '/../../res/openssl.cnf';

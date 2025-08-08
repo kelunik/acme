@@ -37,7 +37,8 @@
         "sabre/uri": "^1.2.1",
         "psr/log": "^1 || ^2 || ^3",
         "kelunik/certificate": "^1.1.3",
-        "beberlei/assert": "^3.3.3"
+        "beberlei/assert": "^3.3.3",
+        "symfony/polyfill-php83": "^1.32.0"
     },
     "require-dev": {
         "phpunit/phpunit": "^9.6.23",

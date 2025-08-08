@@ -44,6 +44,7 @@ final class OpensslCsrGenerator implements CsrGenerator
     }
 
     /** @inheritdoc */
+    #[\Override]
     public function generateCsr(PrivateKey $key, array $domains): string
     {
         /** @var \OpenSSLAsymmetricKey $privateKey */

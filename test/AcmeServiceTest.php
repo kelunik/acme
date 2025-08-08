@@ -15,6 +15,7 @@ class AcmeServiceTest extends AsyncTestCase
 {
     private AcmeService $service;
 
+    #[\Override]
     public function setUp(): void
     {
         parent::setUp();

@@ -17,6 +17,7 @@ class OpensslCsrGeneratorTest extends AsyncTestCase
     /** @var CsrGenerator */
     private $csrGenerator;
 
+    #[\Override]
     public function setUp(): void
     {
         parent::setUp();
