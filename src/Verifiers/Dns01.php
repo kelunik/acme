@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 /**
  * This file is part of the ACME package.
@@ -27,7 +27,7 @@ final class Dns01
      *
      * @param Dns\DnsResolver|null $resolver DNS resolver, otherwise a default resolver will be used.
      */
-    public function __construct(Dns\DnsResolver $resolver = null)
+    public function __construct(?Dns\DnsResolver $resolver = null)
     {
         $this->resolver = $resolver ?? Dns\dnsResolver();
     }

@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 /**
  * This file is part of the ACME package.
@@ -26,7 +26,7 @@ class AcmeException extends Exception
      * @param string|null     $code ACME error code.
      * @param \Throwable|null $previous Previous exception.
      */
-    public function __construct(string $message, string $code = null, \Throwable $previous = null)
+    public function __construct(string $message, ?string $code = null, ?\Throwable $previous = null)
     {
         parent::__construct($message, 0, $previous);
         $this->code = $code;
