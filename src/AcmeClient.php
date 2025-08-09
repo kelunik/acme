@@ -344,7 +344,7 @@ final class AcmeClient
 
             foreach (AcmeResource::getAll() as $key) {
                 if (isset($directory[$key])) {
-                    $directory[$key] = BaseUri::from($this->directoryUrl)->resolve($directory[$key]);
+                    $directory[$key] = (string) BaseUri::from($this->directoryUrl)->resolve($directory[$key]);
                 }
             }
 
