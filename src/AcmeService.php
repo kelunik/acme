@@ -47,17 +47,21 @@ final class AcmeService
     /**
      * Registers a new account on the server.
      *
-     * @param string $email e-mail address for contact
+     * @param string|null $email e-mail address for contact
      *
      * @see https://datatracker.ietf.org/doc/html/rfc8555#section-7.3
      */
-    public function register(string $email, bool $agreement = false): Account
+    public function register(?string $email = null, bool $agreement = false): Account
     {
-        $this->logger->info('Creating new account with email ' . $email);
+        if ($email === null) {
+            $this->logger->info('Creating new account');
+        } else {
+            $this->logger->info('Creating new account with email ' . $email);
+        }
 
         $response = $this->client->post(AcmeResource::NEW_ACCOUNT, [
             'termsOfServiceAgreed' => $agreement,
-            'contact' => [
+            'contact' => $email === null ? [] : [
                 "mailto:{$email}",
             ],
         ]);
@@ -88,7 +92,7 @@ final class AcmeService
     /**
      * Submit a new order for the given DNS names.
      *
-     * @param string[]                $domainNames DNS names to request order for
+     * @param string[] $domainNames DNS names to request order for
      * @param \DateTimeInterface|null $notBefore The requested value of the notBefore field in the certificate
      * @param \DateTimeInterface|null $notAfter The requested value of the notAfter field in the certificate
      */
@@ -258,7 +262,7 @@ final class AcmeService
     /**
      * Requests a new certificate. This will be done with the finalize URL which is created upon order creation.
      *
-     * @param string       $csr certificate signing request
+     * @param string $csr certificate signing request
      */
     public function finalizeOrder(UriInterface $url, string $csr): Order
     {
@@ -350,7 +354,7 @@ final class AcmeService
      * Generates a new exception using the response to provide details.
      *
      * @param Response $response HTTP response to generate the exception from.
-     * @param string   $body HTTP response body.
+     * @param string $body HTTP response body.
      *
      * @return AcmeException exception generated from the response body
      */
