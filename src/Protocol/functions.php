@@ -72,7 +72,7 @@ function contact(): \Closure
     return static function ($value) {
         Assert::that($value)->string();
 
-        return Uri::createFromString($value);
+        return Uri::new($value);
     };
 }
 
@@ -110,7 +110,7 @@ function url(): \Closure
     return static function ($value) {
         Assert::that($value)->string()->url();
 
-        return Http::createFromString($value);
+        return Http::new($value);
     };
 }
 

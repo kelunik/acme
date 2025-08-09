@@ -21,7 +21,7 @@ final class Authorization
             throw new AcmeException('Missing authorization URL');
         }
 
-        return new self(Http::createFromString($url), ...parseResponse($payload, [
+        return new self(Http::new($url), ...parseResponse($payload, [
             'identifier' => identifier(),
             'status' => enum(AuthorizationStatus::getAll()),
             'expires' => dateTime(),

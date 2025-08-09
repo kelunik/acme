@@ -63,7 +63,7 @@ final class AcmeResponseTest extends TestCase
      */
     public function parseAuthorizationObject(): void
     {
-        $authorization = Authorization::fromResponse((string) Http::createFromString('http://example.com/'), '{
+        $authorization = Authorization::fromResponse((string) Http::new('http://example.com/'), '{
      "status": "valid",
      "expires": "2018-09-09T14:09:01.13Z",
 
@@ -98,7 +98,7 @@ final class AcmeResponseTest extends TestCase
         $this->expectException(AcmeException::class);
         $this->expectExceptionMessage('Invalid response');
 
-        Authorization::fromResponse((string) Http::createFromString('http://example.com/'), '{
+        Authorization::fromResponse((string) Http::new('http://example.com/'), '{
      "status": "valid",
      "expires": "2018-09-09T14:09:01.13Z",
 

@@ -21,7 +21,7 @@ final class Account
             throw new AcmeException('Missing account URL');
         }
 
-        return new self(Http::createFromString($url), ...parseResponse($payload, [
+        return new self(Http::new($url), ...parseResponse($payload, [
             'status' => enum(AccountStatus::getAll()),
             'contact' => multiple(contact(), true),
             'orders' => optional(url()),

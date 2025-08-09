@@ -21,7 +21,7 @@ final class Order
             throw new AcmeException('Missing order URL');
         }
 
-        return new self(Http::createFromString($url), ...parseResponse($payload, [
+        return new self(Http::new($url), ...parseResponse($payload, [
             'status' => enum(OrderStatus::getAll()),
             'identifiers' => multiple(identifier()),
             'authorizations' => multiple(url()),

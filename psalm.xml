@@ -23,13 +23,6 @@
             </errorLevel>
         </MissingClosureParamType>
 
-        <DeprecatedMethod>
-            <errorLevel type="suppress">
-                <directory name="src" />
-                <directory name="test" />
-            </errorLevel>
-        </DeprecatedMethod>
-
         <MissingClosureReturnType>
             <errorLevel type="suppress">
                 <directory name="src" />
