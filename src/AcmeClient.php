@@ -156,7 +156,7 @@ final class AcmeClient
             $attempt++;
 
             if ($attempt > 3) {
-                throw new AcmeException("POST request to {$url} failed, received too many errors (last code: ${statusCode}).");
+                throw new AcmeException("POST request to {$url} failed, received too many errors (last code: {$statusCode}).");
             }
 
             $accountUrl = $url === $newAccountUrl ? null : $this->accountUrl;
