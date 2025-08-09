@@ -66,11 +66,13 @@ final class AcmeService
             ],
         ]);
 
+        $responseBody = $response->getBody()->buffer();
+
         if (\in_array($response->getStatus(), [200, 201], true)) {
-            return Account::fromResponse($response->getHeader('location'), $response->getBody()->buffer());
+            return Account::fromResponse($response->getHeader('location'), $responseBody);
         }
 
-        throw $this->generateException($response, $response->getBody()->buffer());
+        throw $this->generateException($response, $responseBody);
     }
 
     /**
@@ -81,12 +83,13 @@ final class AcmeService
         $this->logger->info('Retrieving order ' . (string) $url);
 
         $response = $this->client->post((string) $url, null);
+        $responseBody = $response->getBody()->buffer();
 
         if ($response->getStatus() === 200) {
-            return Order::fromResponse((string) $url, $response->getBody()->buffer());
+            return Order::fromResponse((string) $url, $responseBody);
         }
 
-        throw $this->generateException($response, $response->getBody()->buffer());
+        throw $this->generateException($response, $responseBody);
     }
 
     /**
@@ -120,12 +123,13 @@ final class AcmeService
         }
 
         $response = $this->client->post(AcmeResource::NEW_ORDER, $request);
+        $responseBody = $response->getBody()->buffer();
 
         if ($response->getStatus() === 201) {
-            return Order::fromResponse($response->getHeader('location'), $response->getBody()->buffer());
+            return Order::fromResponse($response->getHeader('location'), $responseBody);
         }
 
-        throw $this->generateException($response, $response->getBody()->buffer());
+        throw $this->generateException($response, $responseBody);
     }
 
     /**
@@ -138,11 +142,12 @@ final class AcmeService
         $this->logger->info('Finalizing challenge ' . (string) $url);
 
         $response = $this->client->post((string) $url, []);
+        $responseBody = $response->getBody()->buffer();
 
         try {
-            return Challenge::fromResponse($response->getBody()->buffer());
+            return Challenge::fromResponse($responseBody);
         } catch (\Throwable $_) {
-            throw $this->generateException($response, $response->getBody()->buffer());
+            throw $this->generateException($response, $responseBody);
         }
     }
 
@@ -154,11 +159,12 @@ final class AcmeService
         $this->logger->info('Retrieving authorization ' . (string) $url);
 
         $response = $this->client->post((string) $url, null);
+        $responseBody = $response->getBody()->buffer();
 
         try {
-            return Authorization::fromResponse((string) $url, $response->getBody()->buffer());
+            return Authorization::fromResponse((string) $url, $responseBody);
         } catch (\Throwable $_) {
-            throw $this->generateException($response, $response->getBody()->buffer());
+            throw $this->generateException($response, $responseBody);
         }
     }
 
@@ -170,11 +176,12 @@ final class AcmeService
         $this->logger->info('Retrieving challenge ' . (string) $url);
 
         $response = $this->client->post((string) $url, null);
+        $responseBody = $response->getBody()->buffer();
 
         try {
-            return Challenge::fromResponse($response->getBody()->buffer());
+            return Challenge::fromResponse($responseBody);
         } catch (\Throwable $_) {
-            throw $this->generateException($response, $response->getBody()->buffer());
+            throw $this->generateException($response, $responseBody);
         }
     }
 
@@ -289,8 +296,10 @@ final class AcmeService
             'csr' => base64UrlEncode(\base64_decode($csr)),
         ]);
 
+        $responseBody = $response->getBody()->buffer();
+
         if ($response->getStatus() !== 200) {
-            throw $this->generateException($response, $response->getBody()->buffer());
+            throw $this->generateException($response, $responseBody);
         }
     }
 
@@ -306,9 +315,10 @@ final class AcmeService
         $this->logger->info('Downloading certificate ' . (string) $url);
 
         $response = $this->client->post((string) $url, null);
+        $responseBody = $response->getBody()->buffer();
 
         if ($response->getStatus() === 200) {
-            $certificateChain = $response->getBody()->buffer();
+            $certificateChain = $responseBody;
             $certificates = [];
 
             while (\preg_match(
@@ -325,7 +335,7 @@ final class AcmeService
             return $certificates;
         }
 
-        throw $this->generateException($response, $response->getBody()->buffer());
+        throw $this->generateException($response, $responseBody);
     }
 
     /**
@@ -341,11 +351,13 @@ final class AcmeService
             'certificate' => base64UrlEncode(Certificate::pemToDer($pem)),
         ]);
 
+        $responseBody = $response->getBody()->buffer();
+
         if ($response->getStatus() === 200) {
             return;
         }
 
-        throw $this->generateException($response, $response->getBody()->buffer());
+        throw $this->generateException($response, $responseBody);
     }
 
     /**
