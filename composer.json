@@ -26,6 +26,11 @@
             "src/Protocol/functions.php"
         ]
     },
+    "autoload-dev": {
+        "psr-4": {
+            "Kelunik\\Acme\\": "test"
+        }
+    },
     "prefer-stable": true,
     "minimum-stability": "dev",
     "require": {
