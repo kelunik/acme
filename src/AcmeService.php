@@ -264,7 +264,7 @@ final class AcmeService
      *
      * @param string $csr certificate signing request
      */
-    public function finalizeOrder(UriInterface $url, string $csr): Order
+    public function finalizeOrder(UriInterface $url, string $csr): void
     {
         $this->logger->info('Finalizing order ' . (string) $url);
 
@@ -289,11 +289,9 @@ final class AcmeService
             'csr' => base64UrlEncode(\base64_decode($csr)),
         ]);
 
-        if ($response->getStatus() === 200) {
-            return Order::fromResponse($response->getHeader('location'), $response->getBody()->buffer());
+        if ($response->getStatus() !== 200) {
+            throw $this->generateException($response, $response->getBody()->buffer());
         }
-
-        throw $this->generateException($response, $response->getBody()->buffer());
     }
 
     /**
