@@ -9,19 +9,16 @@
 
 namespace Kelunik\Acme;
 
-use Assert\Assert;
 use Kelunik\Acme\Crypto\Backend\Backend;
 use Kelunik\Acme\Crypto\PrivateKey;
-use League\Uri\Http;
-use Psr\Http\Message\UriInterface;
 
 /**
- * Generates the a key authorization, which must be provided in challenges, e.g. directly in HTTP-01
+ * Generates a key authorization, which must be provided in challenges, e.g. directly in HTTP-01
  * and further encoded for DNS-01.
  *
  * @param PrivateKey $accountKey Account key pair.
- * @param string     $token Challenge token.
- * @param Backend    $cryptoBackend Crypto backend.
+ * @param string $token Challenge token.
+ * @param Backend $cryptoBackend Crypto backend.
  *
  * @return string Key authorization.
  * @api
