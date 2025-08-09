@@ -321,7 +321,7 @@ final class AcmeService
                 $certificateChain = \str_replace($match[0], '', $certificateChain);
                 $certificate = Certificate::derToPem(Certificate::pemToDer($match[0]));
 
-                $certificates[] = $certificate;
+                $certificates[] = new Certificate($certificate);
             }
 
             return $certificates;
