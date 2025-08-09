@@ -56,7 +56,7 @@ jobs:
             composer-
 
       - name: Remove psalm on unsupported versions
-        run: composer remove psalm/phar --no-update
+        run: composer remove psalm/phar --no-update --dev
         if: matrix.static-analysis == 'none'
 
       - name: Install dependencies
