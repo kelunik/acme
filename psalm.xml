@@ -36,6 +36,12 @@
             </errorLevel>
         </UnusedClass>
 
+        <PossiblyUnusedReturnValue>
+            <errorLevel type="suppress">
+                <directory name="src" />
+            </errorLevel>
+        </PossiblyUnusedReturnValue>
+
         <PossiblyUnusedMethod>
             <errorLevel type="suppress">
                 <directory name="src" />
@@ -65,5 +71,11 @@
                 <directory name="test" />
             </errorLevel>
         </PossiblyFalseOperand>
+
+        <PossiblyNullReference>
+            <errorLevel type="suppress">
+                <directory name="test" />
+            </errorLevel>
+        </PossiblyNullReference>
     </issueHandlers>
 </psalm>
