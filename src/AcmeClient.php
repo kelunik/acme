@@ -20,11 +20,11 @@ use Kelunik\Acme\Crypto\Backend\Backend;
 use Kelunik\Acme\Crypto\Backend\OpensslBackend;
 use Kelunik\Acme\Crypto\PrivateKey;
 use Kelunik\Acme\Protocol\Account;
+use League\Uri\BaseUri;
 use Psr\Log\LoggerInterface as PsrLogger;
 use Psr\Log\NullLogger;
 use Throwable;
 use function Amp\delay;
-use function Sabre\Uri\resolve;
 
 /**
  * Low level ACME client.
@@ -344,7 +344,7 @@ final class AcmeClient
 
             foreach (AcmeResource::getAll() as $key) {
                 if (isset($directory[$key])) {
-                    $directory[$key] = resolve($this->directoryUrl, $directory[$key]);
+                    $directory[$key] = BaseUri::from($this->directoryUrl)->resolve($directory[$key]);
                 }
             }
 
