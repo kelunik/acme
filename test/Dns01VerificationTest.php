@@ -6,10 +6,10 @@ use Amp\Dns\DnsException;
 use Amp\Dns\DnsRecord;
 use Amp\Dns\DnsResolver;
 use Amp\Dns\MissingDnsRecordException;
-use Amp\PHPUnit\AsyncTestCase;
 use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-final class Dns01VerificationTest extends AsyncTestCase
+final class Dns01VerificationTest extends TestCase
 {
     /** @var DnsResolver&MockObject */
     private DnsResolver $resolver;

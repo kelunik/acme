@@ -2,14 +2,14 @@
 
 namespace Kelunik\Acme;
 
-use Amp\PHPUnit\AsyncTestCase;
 use Kelunik\Acme\Crypto\KeyGenerator;
 use Kelunik\Acme\Crypto\PrivateKey;
 use Kelunik\Acme\Crypto\RsaKeyGenerator;
 use Kelunik\Acme\Csr\CsrGenerator;
 use Kelunik\Acme\Csr\OpensslCsrGenerator;
+use PHPUnit\Framework\TestCase;
 
-final class OpensslCsrGeneratorTest extends AsyncTestCase
+final class OpensslCsrGeneratorTest extends TestCase
 {
     private KeyGenerator $keyGenerator;
     private CsrGenerator $csrGenerator;
