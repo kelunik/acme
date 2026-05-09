@@ -4,9 +4,9 @@ namespace Kelunik\Acme;
 
 use Amp\Http\Client\HttpClientBuilder;
 use Amp\Http\Client\Request;
-use Amp\PHPUnit\AsyncTestCase;
+use PHPUnit\Framework\TestCase;
 
-final class Http01VerificationTest extends AsyncTestCase
+final class Http01VerificationTest extends TestCase
 {
     /**
      * @var Verifiers\Http01

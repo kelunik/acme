@@ -2,12 +2,12 @@
 
 namespace Kelunik\Acme;
 
-use Amp\PHPUnit\AsyncTestCase;
 use Amp\Socket\ClientTlsContext;
 use Amp\Socket\ConnectContext;
+use PHPUnit\Framework\TestCase;
 use function Amp\Socket\connect;
 
-final class ConnectTest extends AsyncTestCase
+final class ConnectTest extends TestCase
 {
     /**
      * Test that TLS connections to the ACME server succeed.

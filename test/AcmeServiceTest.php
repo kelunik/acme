@@ -5,15 +5,15 @@ namespace Kelunik\Acme;
 use Amp\Http\Client\Connection\DefaultConnectionFactory;
 use Amp\Http\Client\Connection\UnlimitedConnectionPool;
 use Amp\Http\Client\HttpClientBuilder;
-use Amp\PHPUnit\AsyncTestCase;
 use Amp\Socket\ClientTlsContext;
 use Amp\Socket\ConnectContext;
 use Kelunik\Acme\Crypto\RsaKeyGenerator;
 use Kelunik\Acme\Csr\OpensslCsrGenerator;
 use Kelunik\Acme\Protocol\Authorization;
 use Kelunik\Acme\Protocol\Challenge;
+use PHPUnit\Framework\TestCase;
 
-final class AcmeServiceTest extends AsyncTestCase
+final class AcmeServiceTest extends TestCase
 {
     private AcmeService $service;
 

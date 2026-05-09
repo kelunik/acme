@@ -13,15 +13,15 @@ use Amp\Http\Client\DelegateHttpClient;
 use Amp\Http\Client\HttpClientBuilder;
 use Amp\Http\Client\Request;
 use Amp\Http\Client\Response;
-use Amp\PHPUnit\AsyncTestCase;
 use Amp\Socket\ClientTlsContext;
 use Amp\Socket\ConnectContext;
 use Kelunik\Acme\Crypto\RsaKeyGenerator;
+use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use function Amp\Dns\createDefaultResolver;
 use function Amp\Dns\dnsResolver;
 
-final class AcmeClientTest extends AsyncTestCase
+final class AcmeClientTest extends TestCase
 {
     /** @var UnlimitedConnectionPool */
     private $httpPool;
