@@ -20,7 +20,6 @@ use Kelunik\Acme\Crypto\Backend\Backend;
 use Kelunik\Acme\Crypto\Backend\OpensslBackend;
 use Kelunik\Acme\Crypto\PrivateKey;
 use Kelunik\Acme\Protocol\Account;
-use League\Uri\BaseUri;
 use League\Uri\Uri;
 use Psr\Log\LoggerInterface as PsrLogger;
 use Psr\Log\NullLogger;
