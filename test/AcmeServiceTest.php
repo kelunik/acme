@@ -103,8 +103,8 @@ final class AcmeServiceTest extends AsyncTestCase
         $certificates = $this->service->downloadCertificates($order->getCertificateUrl());
 
         self::assertCount(2, $certificates);
-        self::assertEquals('example.com', $certificates[0]->getSubject()->getCommonName());
-        self::assertStringStartsWith('Pebble Intermediate CA', $certificates[1]->getSubject()->getCommonName());
+        self::assertEquals('example.com', $certificates[0]->getSubject()->getCommonName(), $certificates[0]->toPem());
+        self::assertStringStartsWith('Pebble Intermediate CA', $certificates[1]->getSubject()->getCommonName(), $certificates[0]->toPem());
     }
 
     private function findHttpChallenge(Authorization $authorization): ?Challenge
