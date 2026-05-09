@@ -53,6 +53,6 @@
         "phpunit/phpunit": "^9.6.23",
         "amphp/phpunit-util": "^3",
         "amphp/php-cs-fixer-config": "^2.1.0",
-        "psalm/phar": "~6.13"
+        "psalm/phar": "6.16.1"
     }
 }

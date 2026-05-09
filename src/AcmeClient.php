@@ -344,6 +344,7 @@ final class AcmeClient
 
             foreach (AcmeResource::getAll() as $key) {
                 if (isset($directory[$key])) {
+                    /** @psalm-suppress DeprecatedClass */
                     $directory[$key] = (string) BaseUri::from($this->directoryUrl)->resolve($directory[$key]);
                 }
             }
