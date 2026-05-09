@@ -21,6 +21,7 @@ use Kelunik\Acme\Crypto\Backend\OpensslBackend;
 use Kelunik\Acme\Crypto\PrivateKey;
 use Kelunik\Acme\Protocol\Account;
 use League\Uri\BaseUri;
+use League\Uri\Uri;
 use Psr\Log\LoggerInterface as PsrLogger;
 use Psr\Log\NullLogger;
 use Throwable;
@@ -344,8 +345,7 @@ final class AcmeClient
 
             foreach (AcmeResource::getAll() as $key) {
                 if (isset($directory[$key])) {
-                    /** @psalm-suppress DeprecatedClass */
-                    $directory[$key] = (string) BaseUri::from($this->directoryUrl)->resolve($directory[$key]);
+                    $directory[$key] = (string) Uri::parse($directory[$key], $this->directoryUrl);
                 }
             }
 
