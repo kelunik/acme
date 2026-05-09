@@ -39,7 +39,7 @@
         "amphp/amp": "^3.1.0",
         "amphp/byte-stream": "^2.1.2",
         "amphp/dns": "^2.4.0",
-        "amphp/file": "^3.2.0",
+        "amphp/file": "^4 || ^3.2.0",
         "amphp/http-client": "^5.3.3",
         "amphp/socket": "^2.3.1",
         "league/uri": "^7.8.1",
